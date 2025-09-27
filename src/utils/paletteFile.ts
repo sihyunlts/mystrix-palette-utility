@@ -2,7 +2,8 @@ import { Color, Palette } from '../types';
 
 // Parse palette file in Novation format (6-bit values 0-63)
 export function parsePaletteFile(content: string): Color[] {
-  const lines = content.split('\n').filter(line => line.trim());
+  // Handle both \n and \r\n line endings, and split by both \n and \r
+  const lines = content.split(/\r?\n|\r/).filter(line => line.trim());
   const colors: Color[] = Array(128).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
 
   for (const line of lines) {
@@ -23,7 +24,6 @@ export function parsePaletteFile(content: string): Color[] {
       }
     }
   }
-
   return colors;
 }
 
