@@ -58,6 +58,17 @@ export class MatrixOSMIDI {
     ]);
     this.output.send(endSysex);
   }
+
+  // Delete palette from MatrixOS
+  async deletePalette(paletteId: number): Promise<void> {
+    const deleteSysex = new Uint8Array([
+      0xF0, 0x00, 0x02, 0x03, 0x4D, 0x58,
+      0x41, 0x1D,
+      paletteId,
+      0xF7,
+    ]);
+    this.output.send(deleteSysex);
+  }
 }
 
 // Web MIDI API utilities

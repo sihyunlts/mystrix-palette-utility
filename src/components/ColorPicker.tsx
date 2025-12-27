@@ -17,11 +17,16 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [saturation, setSaturation] = useState(100);
   const [lightness, setLightness] = useState(50);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const slRef = useRef<HTMLDivElement>(null);
+  const hueRef = useRef<HTMLDivElement>(null);
 
   // Convert RGB to HSL
   useEffect(() => {
     const { h, s, l } = rgbToHsl(color.r, color.g, color.b);
-    setHue(h);
+    // If saturation is 0 (achromatic), preserve the current hue instead of resetting to 0
+    if (s > 0) {
+      setHue(h);
+    }
     setSaturation(s);
     setLightness(l);
   }, [color]);
@@ -96,20 +101,62 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     onChange(newColor);
   };
 
-  const handleSaturationLightnessChange = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const s = Math.round((x / rect.width) * 100);
-    const l = Math.round(100 - (y / rect.height) * 100);
-    handleColorChange(hue, s, l);
+  const handleSLMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!slRef.current) return;
+    const rect = slRef.current.getBoundingClientRect();
+
+    const update = (clientX: number, clientY: number) => {
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
+      const s = Math.round((x / rect.width) * 100);
+      const l = Math.round(100 - (y / rect.height) * 100);
+      handleColorChange(hue, s, l);
+    };
+
+    update(e.clientX, e.clientY);
+
+    const onMouseMove = (me: MouseEvent) => {
+        update(me.clientX, me.clientY);
+    };
+
+    const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleHueChange = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const h = Math.round((x / rect.width) * 360);
-    handleColorChange(h, saturation, lightness);
+  const handleHueMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!hueRef.current) return;
+    const rect = hueRef.current.getBoundingClientRect();
+
+    const update = (clientX: number) => {
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const h = Math.round((x / rect.width) * 360);
+      handleColorChange(h, saturation, lightness);
+    };
+
+    update(e.clientX);
+
+    const onMouseMove = (me: MouseEvent) => {
+        update(me.clientX);
+    };
+
+    const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
   };
 
   const colorStyle = {
@@ -125,42 +172,63 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     <div style={{ position: 'relative' }}>
       <div
         style={colorStyle}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+        }}
       />
       
       {isOpen && (
-        <div
-          ref={pickerRef}
-          style={{
-            position: 'absolute',
-            top: size + 5,
-            left: 0,
-            background: '#333',
-            padding: '10px',
-            borderRadius: '8px',
-            border: '1px solid #555',
-            zIndex: 1000,
-            minWidth: '200px'
-          }}
-        >
+        <>
+          <div 
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 999,
+                cursor: 'default'
+            }}
+            onClick={() => setIsOpen(false)}
+          />
+          <div
+            ref={pickerRef}
+            onClick={(e) => e.stopPropagation()} 
+            style={{
+                position: 'absolute',
+                top: size + 10,
+                left: 0,
+                background: 'var(--color-bg-surface)',
+                padding: '12px',
+                borderRadius: 'var(--radius-main)',
+                border: '1px solid var(--color-border)',
+                zIndex: 1000,
+                minWidth: '220px',
+                boxShadow: 'var(--shadow-intense)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+            }}
+            >
           {/* Saturation/Lightness picker */}
           <div
+            ref={slRef}
             style={{
-              width: '180px',
-              height: '120px',
+              width: '100%',
+              height: '140px',
               background: `hsl(${hue}, 100%, 50%)`,
               position: 'relative',
               cursor: 'crosshair',
-              marginBottom: '10px'
+              borderRadius: '2px',
+              overflow: 'hidden'
             }}
-            onClick={handleSaturationLightnessChange}
+            onMouseDown={handleSLMouseDown}
           >
             <div
               style={{
                 position: 'absolute',
                 width: '100%',
                 height: '100%',
-                background: 'linear-gradient(to right, white, transparent), linear-gradient(to top, black, transparent)'
+                background: 'linear-gradient(to right, white, transparent), linear-gradient(to top, black, transparent)',
+                pointerEvents: 'none'
               }}
             />
             <div
@@ -168,71 +236,72 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 position: 'absolute',
                 left: `${saturation}%`,
                 top: `${100 - lightness}%`,
-                width: '8px',
-                height: '8px',
+                width: '10px',
+                height: '10px',
                 borderRadius: '50%',
                 border: '2px solid white',
-                transform: 'translate(-50%, -50%)'
+                transform: 'translate(-50%, -50%)',
+                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                pointerEvents: 'none'
               }}
             />
           </div>
 
           {/* Hue picker */}
           <div
+            ref={hueRef}
             style={{
-              width: '180px',
-              height: '20px',
+              width: '100%',
+              height: '16px',
               background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
               cursor: 'pointer',
-              position: 'relative'
+              position: 'relative',
+              borderRadius: '8px'
             }}
-            onClick={handleHueChange}
+            onMouseDown={handleHueMouseDown}
           >
             <div
               style={{
                 position: 'absolute',
                 left: `${hue / 3.6}%`,
                 top: '50%',
-                width: '4px',
-                height: '24px',
+                width: '12px',
+                height: '12px',
                 background: 'white',
                 transform: 'translate(-50%, -50%)',
-                borderRadius: '2px'
+                borderRadius: '50%',
+                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                pointerEvents: 'none'
               }}
             />
           </div>
 
           {/* RGB inputs */}
-          <div style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
-            <input
-              type="number"
-              min="0"
-              max="255"
-              value={color.r}
-              onChange={(e) => onChange({ ...color, r: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-              style={{ width: '50px', padding: '2px' }}
-              placeholder="R"
-            />
-            <input
-              type="number"
-              min="0"
-              max="255"
-              value={color.g}
-              onChange={(e) => onChange({ ...color, g: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-              style={{ width: '50px', padding: '2px' }}
-              placeholder="G"
-            />
-            <input
-              type="number"
-              min="0"
-              max="255"
-              value={color.b}
-              onChange={(e) => onChange({ ...color, b: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-              style={{ width: '50px', padding: '2px' }}
-              placeholder="B"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {['r', 'g', 'b'].map((channel) => (
+                <div key={channel} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label className="text-label" style={{ fontSize: '10px' }}>{channel.toUpperCase()}</label>
+                    <input
+                    type="number"
+                    min="0"
+                    max="255"
+                    value={(color as any)[channel]}
+                    onChange={(e) => onChange({ ...color, [channel]: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
+                    style={{ 
+                        width: '100%', 
+                        padding: '6px',
+                        backgroundColor: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-subtle)',
+                        color: 'var(--color-text-main)',
+                        fontSize: '12px'
+                    }}
+                    />
+                </div>
+            ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );

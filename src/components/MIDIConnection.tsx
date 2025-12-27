@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MIDIManager } from '../utils/midi';
+import { Button } from './Button';
 
 interface MIDIConnectionProps {
   onDeviceConnected: (device: MIDIOutput) => void;
@@ -23,10 +24,10 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   const midiManager = MIDIManager.getInstance();
 
   useEffect(() => {
-    initializeMIDI();
+    initializeMIDI(true);
   }, []);
 
-  const initializeMIDI = async () => {
+  const initializeMIDI = async (autoConnect: boolean = false) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -36,7 +37,14 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
       setAvailableDevices(devices);
       
       if (devices.length === 0) {
-        setError('No MIDI devices found. Please connect your device and refresh.');
+        setError('No MIDI devices found.');
+      } else if (autoConnect) {
+        const targetDevice = devices.find(d => 
+          d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
+        );
+        if (targetDevice) {
+           handleDeviceSelect(targetDevice);
+        }
       }
     } catch (err) {
       setError('Web MIDI API not supported or access denied.');
@@ -64,129 +72,98 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     setError(null);
     setAvailableDevices([]);
     onDeviceSelect(null);
-    initializeMIDI();
+    initializeMIDI(false);
   };
 
   if (isLoading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>
         <div>Initializing MIDI...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ color: '#ff6b6b', marginBottom: '10px' }}>
-          {error}
-        </div>
-        <button
-          onClick={handleRefresh}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#007acc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Refresh
-        </button>
-      </div>
-    );
-  }
-
-  if (availableDevices.length > 0 && !isConnected) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ marginBottom: '15px' }}>
-          <h3>Select MIDI Device</h3>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          {availableDevices.map((device, index) => (
-            <button
-              key={index}
-              onClick={() => handleDeviceSelect(device)}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '10px',
-                margin: '5px 0',
-                backgroundColor: selectedDevice === device ? '#007acc' : '#333',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ fontWeight: 'bold' }}>{device.name}</div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                {device.manufacturer} - Port {index + 1}
-              </div>
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={handleRefresh}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#666',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Refresh Devices
-        </button>
       </div>
     );
   }
 
   if (isConnected) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ color: '#4caf50', marginBottom: '10px' }}>
-          ✓ Connected to: {deviceName}
+      <div>
+        <div style={{ 
+            color: 'var(--color-accent)', 
+            marginBottom: '16px', 
+            fontWeight: 600,
+            fontSize: '14px' 
+        }}>
+          ● Connected to <br /> {deviceName}
         </div>
-        <button
-          onClick={handleRefresh}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#666',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Reconnect
-        </button>
+        <Button onClick={handleRefresh} variant="secondary">
+          Disconnect & Change
+        </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      <div style={{ marginBottom: '10px' }}>
-        No Mystrix(Matrix) detected
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-main)', opacity: 0.8 }}>Select Device</h3>
+        <Button onClick={handleRefresh} variant="ghost" style={{ padding: '4px 8px', fontSize: '12px' }}>
+            ↻ Refresh
+        </Button>
       </div>
-      <button
-        onClick={handleRefresh}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#007acc',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Search for Device
-      </button>
+
+      {error ? (
+        <div style={{ 
+            padding: '16px', 
+            backgroundColor: 'rgba(244, 67, 54, 0.1)', 
+            border: '1px solid var(--color-danger)',
+            borderRadius: 'var(--radius-subtle)',
+            color: 'var(--color-danger)',
+            fontSize: '13px',
+            textAlign: 'center'
+        }}>
+          {error}
+        </div>
+      ) : (
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px',
+            maxHeight: '200px',
+            overflowY: 'auto'
+        }}>
+            {availableDevices.length > 0 ? availableDevices.map((device, index) => (
+            <button
+                key={index}
+                onClick={() => handleDeviceSelect(device)}
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    padding: '12px',
+                    backgroundColor: selectedDevice === device ? 'var(--color-primary)' : 'var(--color-bg-subtle)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-subtle)',
+                    cursor: 'pointer',
+                    color: 'var(--color-text-main)',
+                    transition: 'all 0.2s',
+                    textAlign: 'left'
+                }}
+                onMouseOver={e => {
+                    if (selectedDevice !== device) e.currentTarget.style.backgroundColor = 'var(--color-bg-subtle)';
+                }}
+                onMouseOut={e => {
+                    if (selectedDevice !== device) e.currentTarget.style.backgroundColor = 'var(--color-bg-subtle)';
+                }}
+            >
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>{device.name}</span>
+                <span style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{device.manufacturer} - Port {index + 1}</span>
+            </button>
+            )) : (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-dim)', fontSize: '13px' }}>
+                    No devices detected.
+                </div>
+            )}
+        </div>
+      )}
     </div>
   );
 };

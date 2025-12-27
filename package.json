@@ -4,6 +4,7 @@
   "description": "Mystrix Custom Palette Editor",
   "private": true,
   "dependencies": {
+    "@tonejs/midi": "^2.0.28",
     "@types/react": "^19.1.14",
     "@types/react-dom": "^19.1.9",
     "react": "^19.1.1",
