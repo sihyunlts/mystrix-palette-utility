@@ -6,6 +6,8 @@ import { PaletteGrid } from './components/PaletteGrid';
 import { DropdownButton } from './components/DropdownButton';
 import { Button } from './components/Button';
 import { ModalProvider, useModal } from './components/Modal';
+import { SelectedPadInfo } from './components/SelectedPadInfo';
+import { GlobalAdjustmentBox } from './components/GlobalAdjustmentBox';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
 import { LightshowPlayer, LightshowEvent } from './utils/LightshowPlayer';
 import { applyGlobalSettings } from './utils/colorUtils';
@@ -588,16 +590,42 @@ const AppContent: React.FC = () => {
             }}>
               <PaletteGrid
                 palette={effectivePalette}
-                onColorChange={handleColorChange}
                 selectedIndex={selectedColorIndex}
                 onColorSelect={(index) => setSelectedColorIndex(prev => prev === index ? undefined : index)}
                 lightshowColors={lightshowColors}
                 isLightshowActive={isLightshowActive}
-                globalSaturation={globalSaturation}
-                globalContrast={globalContrast}
-                onGlobalSaturationChange={setGlobalSaturation}
-                onGlobalContrastChange={setGlobalContrast}
               />
+
+              <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px', marginTop: '24px' }}>
+                <div style={{
+                  flex: '1 1 360px',
+                  display: 'flex',
+                }}>
+                  <SelectedPadInfo
+                    selectedIndex={selectedColorIndex}
+                    color={(selectedColorIndex !== undefined ? palette.colors[selectedColorIndex] : null) || { r: 0, g: 0, b: 0 }}
+                    onColorChange={(color) => selectedColorIndex !== undefined && handleColorChange(selectedColorIndex, color)}
+                  />
+                </div>
+
+                {globalSaturation !== undefined && globalContrast !== undefined && (
+                  <div style={{
+                    flex: '1 1 360px',
+                    borderRadius: 'var(--radius-main)',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '20px'
+                  }}>
+                    <GlobalAdjustmentBox 
+                      saturation={globalSaturation}
+                      contrast={globalContrast}
+                      onSaturationChange={setGlobalSaturation}
+                      onContrastChange={setGlobalContrast}
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="controls-row">
                 <div style={{ display: 'flex', gap: '12px' }}>

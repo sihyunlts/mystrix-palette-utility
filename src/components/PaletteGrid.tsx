@@ -1,20 +1,12 @@
-import React, { useRef, useEffect, useState, memo } from 'react';
+import React, { memo, useRef } from 'react';
 import { Color, Palette } from '../types';
-import { ColorPicker } from './ColorPicker';
-import { Button } from './Button';
-import { Slider } from './Slider';
 
 interface PaletteGridProps {
   palette: Palette;
-  onColorChange: (index: number, color: Color) => void;
   selectedIndex?: number;
   onColorSelect?: (index: number) => void;
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
-  globalSaturation?: number;
-  globalContrast?: number;
-  onGlobalSaturationChange?: (value: number) => void;
-  onGlobalContrastChange?: (value: number) => void;
 }
 
 interface PadProps {
@@ -26,7 +18,6 @@ interface PadProps {
   onClick?: (index: number) => void;
   isLightshowActive?: boolean;
 }
-
 
 // Meticulously preserve the "Version 3" Lighting Math
 const gamma = 0.6;
@@ -238,18 +229,11 @@ const Pad = memo(({
 
 export const PaletteGrid: React.FC<PaletteGridProps> = ({
   palette,
-  onColorChange,
   selectedIndex,
   onColorSelect,
   lightshowColors,
-  isLightshowActive,
-  globalSaturation,
-  globalContrast,
-  onGlobalSaturationChange,
-  onGlobalContrastChange
+  isLightshowActive
 }) => {
-  // Use effective colors directly unless lightshow is active
-  const activeColors = isLightshowActive && lightshowColors ? Array.from(lightshowColors.values()) : palette.colors;
   const baseColors = palette.colors;
   const gapSize = '0.4%'; // Percentage-based gap for proportional scaling
 
@@ -301,144 +285,16 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ 
-        display: 'flex', 
-        gap: '20px', 
-        marginBottom: '20px',
-        justifyContent: 'center',
-        flexWrap: 'wrap' // Allow wrapping on small screens
-      }}>
-        {renderHardwareBlock(0, '0-63')}
-        {renderHardwareBlock(64, '64-127')}
-      </div>
-      
-      <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px' }}>
-        <div className="mobile-stack" style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '20px',
-          borderRadius: 'var(--radius-main)',
-          border: '1px solid var(--color-border)',
-        }}>
-          <div style={{ display: 'flex', flex: '1 1 360px', alignItems: 'center', gap: '15px' }}>
-              <span className="text-label" style={{ minWidth: '80px' }}>Selected Pad</span>
-              <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--color-border)' }} />
-              
-              <span className="text-code" style={{ fontSize: '16px', color: 'var(--color-text-main)', minWidth: '30px' }}>
-                {selectedIndex !== undefined ? selectedIndex : '---'}
-              </span>
-          </div>
-
-          <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--color-border)', margin: '0 15px' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div style={{ 
-                   opacity: selectedIndex !== undefined ? 1 : 0.5, 
-                   pointerEvents: selectedIndex !== undefined ? 'auto' : 'none' 
-              }}>
-                  <ColorPicker
-                  color={(selectedIndex !== undefined ? baseColors[selectedIndex] : null) || { r: 0, g: 0, b: 0 }}
-                  onChange={(color) => selectedIndex !== undefined && onColorChange(selectedIndex, color)}
-                  size={50}
-                  />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span className="text-label">RGB Value</span>
-                  <code className="text-code" style={{ color: '#00ffaa' }}>
-                  {selectedIndex !== undefined 
-                      ? `${baseColors[selectedIndex]?.r || 0}, ${baseColors[selectedIndex]?.g || 0}, ${baseColors[selectedIndex]?.b || 0}`
-                      : '-, -, -'}
-                  </code>
-              </div>
-          </div>
-        </div>
-
-        {/* Global Adjustment Box */}
-        {globalSaturation !== undefined && globalContrast !== undefined && (
-           <div style={{
-              flex: '1 1 360px',
-              borderRadius: 'var(--radius-main)',
-              border: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '20px'
-           }}>
-             <GlobalAdjustmentBox 
-                saturation={globalSaturation}
-                contrast={globalContrast}
-                onSaturationChange={onGlobalSaturationChange || (() => {})}
-                onContrastChange={onGlobalContrastChange || (() => {})}
-             />
-           </div>
-        )}
-      </div>
+    <div style={{ 
+      display: 'flex', 
+      gap: '20px', 
+      marginBottom: '20px',
+      justifyContent: 'center',
+      flexWrap: 'wrap' // Allow wrapping on small screens
+    }}>
+      {renderHardwareBlock(0, '0-63')}
+      {renderHardwareBlock(64, '64-127')}
     </div>
   );
 };
 
-// Helper functions rgbToHsl and hslToRgb are removed as they are now used in App.tsx/colorUtils.ts
-// for generating the effectivePalette passed to this component.
-
-const GlobalAdjustmentBox: React.FC<{ 
-    saturation: number,
-    contrast: number,
-    onSaturationChange: (val: number) => void,
-    onContrastChange: (val: number) => void
-}> = ({ saturation, contrast, onSaturationChange, onContrastChange }) => {
-
-    const handleReset = () => {
-        onSaturationChange(0);
-        onContrastChange(0);
-    };
-
-    const hasChanges = saturation !== 0 || contrast !== 0;
-
-    return (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            width: '100%'
-        }}>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '70px' }}>
-                 <span className="text-label">Global</span>
-                 {hasChanges && (
-                    <div 
-                        onClick={handleReset}
-                        className="text-code"
-                        style={{ 
-                            cursor: 'pointer', 
-                            color: 'var(--color-danger)', 
-                            fontSize: '11px',
-                            textDecoration: 'underline'
-                        }}
-                    >
-                        Reset
-                    </div>
-                 )}
-             </div>
-
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-                 <Slider
-                    label="Saturation"
-                    value={saturation}
-                    min={-100}
-                    max={100}
-                    onChange={onSaturationChange}
-                    valueDisplay={`${saturation > 0 ? '+' : ''}${saturation}%`}
-                 />
-                 <Slider
-                    label="Contrast"
-                    value={contrast}
-                    min={-15}
-                    max={15}
-                    onChange={onContrastChange}
-                    valueDisplay={`${contrast > 0 ? '+' : ''}${contrast}%`}
-                 />
-             </div>
-        </div>
-    );
-};
