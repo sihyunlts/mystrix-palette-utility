@@ -60,7 +60,7 @@ const SectionHeader: React.FC<{
 const containerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '16px'
+  gap: '12px'
 };
 
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({

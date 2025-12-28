@@ -248,6 +248,19 @@ const AppContent: React.FC = () => {
       letterSpacing: '0.5px',
       fontWeight: 500
     };
+
+    const COMMON_SIDEBAR_DIV_STYLE: React.CSSProperties = {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+      padding: '24px',
+      backgroundColor: 'var(--color-bg-surface)',
+      borderRadius: 'var(--radius-main)',
+      border: '1px solid var(--color-border)',
+      height: 'fit-content',
+      width: isMobile ? '100%' : '320px',
+      order: isMobile ? -1 : 0
+    };
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
@@ -590,72 +603,54 @@ const AppContent: React.FC = () => {
             gap: '24px'
         }}>
           {/* Left Column: Branding and Connection */}
-          <aside style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-            padding: '24px',
-            backgroundColor: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-main)',
-            border: '1px solid var(--color-border)',
-            height: 'fit-content',
-            width: isMobile ? '100%' : '320px',
-            order: isMobile ? -1 : 0
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
-                Mystrix <span style={{ color: 'var(--color-accent)' }}>Palette</span>
-              </h1>
-            </div>
+          <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ ...COMMON_SIDEBAR_DIV_STYLE}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                  Mystrix <span style={{ color: 'var(--color-accent)' }}>Palette</span>
+                </h1>
+              </div>
 
-            <div style={{ 
-              paddingTop: '20px',
-              borderTop: '1px solid var(--color-border)'
-            }}>
-              <MIDIConnection
-                onDeviceConnected={handleDeviceConnected}
-                onDeviceDisconnected={handleDeviceDisconnected}
-                selectedDevice={selectedDevice}
-                onDeviceSelect={handleDeviceSelect}
-              />
-            </div>
-            
-            <div style={{ 
-              paddingTop: '20px',
-              borderTop: '1px solid var(--color-border)'
-            }}>
-              <div style={LABEL_STYLE}>
-                Lightshow Preview
+              <div style={{ 
+                paddingTop: '20px',
+                borderTop: '1px solid var(--color-border)'
+              }}>
+                <MIDIConnection
+                  onDeviceConnected={handleDeviceConnected}
+                  onDeviceDisconnected={handleDeviceDisconnected}
+                  selectedDevice={selectedDevice}
+                  onDeviceSelect={handleDeviceSelect}
+                />
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--color-text-dim)', lineHeight: '1.4' }}>
-                   Upload a MIDI file to preview the lightshow effect on the grid.
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                   <Button 
-                      variant="ghost" 
-                      onClick={() => previewInputRef.current?.click()}
-                      style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                   >
-                     {previewFile ? previewFile.name : 'Select MIDI File'}
-                   </Button>
-                   
-                   <Button 
-                      variant="primary"
-                      disabled={!previewFile || isLightshowActive}
-                      onClick={() => {
-                          if (previewFile) {
-                              playLightshow(previewFile);
-                          }
-                      }}
-                   >
-                     ►
-                   </Button>
-                </div>
-              </div>
             </div>
+            <div style={{ ...COMMON_SIDEBAR_DIV_STYLE}}>
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-dim)', lineHeight: '1.4' }}>
+                    Upload a MIDI file to preview the lightshow effect on the grid.
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button 
+                        variant="ghost" 
+                        onClick={() => previewInputRef.current?.click()}
+                        style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    >
+                      {previewFile ? previewFile.name : 'Select MIDI File'}
+                    </Button>
+                    
+                    <Button 
+                        variant="primary"
+                        disabled={!previewFile || isLightshowActive}
+                        onClick={() => {
+                            if (previewFile) {
+                                playLightshow(previewFile);
+                            }
+                        }}
+                    >
+                      ►
+                    </Button>
+                  </div>
+                </div>
           </aside>
 
           {/* Right Column: Main Workspace */}
