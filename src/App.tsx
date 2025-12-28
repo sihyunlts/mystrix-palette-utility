@@ -383,8 +383,6 @@ const AppContent: React.FC = () => {
     if (device) {
       setMidiOutput(device);
       setMatrixOS(new MatrixOSMIDI(device));
-      // Manual selection also triggers the welcome lightshow
-      playLightshow('/connected.mid', device);
     } else {
       setMidiOutput(null);
       setMatrixOS(null);
