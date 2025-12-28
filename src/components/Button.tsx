@@ -3,12 +3,14 @@ import React from 'react';
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
   isLoading?: boolean;
+  active?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({ 
   children, 
   variant = 'primary', 
   isLoading = false,
+  active = false,
   className = '',
   style,
   disabled,
@@ -18,9 +20,10 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: 'var(--color-primary)',
+          backgroundColor: active ? 'var(--color-primary)' : 'var(--color-primary)',
           color: 'var(--color-text-main)',
           border: 'none',
+          boxShadow: active ? '0 0 15px var(--color-primary)' : 'none',
         };
       case 'danger':
         return {
@@ -30,20 +33,20 @@ export const Button: React.FC<ButtonProps> = ({
         };
       case 'secondary':
         return {
-          backgroundColor: 'var(--color-secondary)',
+          backgroundColor: active ? 'var(--color-primary)' : 'var(--color-secondary)',
           color: 'var(--color-text-main)',
           border: 'none',
         };
       case 'ghost':
         return {
-          backgroundColor: 'transparent',
-          color: 'var(--color-text-dim)',
-          border: '1px solid var(--color-border)',
+          backgroundColor: active ? 'rgba(65, 113, 255, 0.1)' : 'transparent',
+          color: active ? 'var(--color-primary)' : 'var(--color-text-dim)',
+          border: `1px solid ${active ? 'var(--color-primary)' : 'var(--color-border)'}`,
         };
       case 'icon':
           return {
               backgroundColor: 'transparent',
-              color: 'inherit',
+              color: active ? 'var(--color-primary)' : 'inherit',
               border: 'none',
               padding: '8px',
           }
@@ -64,7 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center',
     gap: '8px',
     opacity: (disabled || isLoading) ? 0.6 : 1,
-    minWidth: variant === 'icon' ? 'auto' : 'unset', // Fixed NaN issue
+    minWidth: variant === 'icon' ? 'auto' : 'unset',
     ...getVariantStyles(),
     ...style,
   };

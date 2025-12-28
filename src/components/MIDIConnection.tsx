@@ -9,6 +9,40 @@ interface MIDIConnectionProps {
   onDeviceSelect: (device: MIDIOutput | null) => void;
 }
 
+const DeviceButton: React.FC<{
+    device: MIDIOutput, 
+    isSelected: boolean, 
+    index: number,
+    onClick: () => void 
+}> = ({ device, isSelected, index, onClick }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                padding: '12px',
+                backgroundColor: isSelected ? 'var(--color-primary)' : (isHovered ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-bg-subtle)'),
+                border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                borderRadius: 'var(--radius-subtle)',
+                cursor: 'pointer',
+                color: 'var(--color-text-main)',
+                transition: 'all 0.2s',
+                textAlign: 'left',
+                width: '100%'
+            }}
+        >
+            <span style={{ fontWeight: 600, fontSize: '14px' }}>{device.name}</span>
+            <span style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{device.manufacturer} - Port {index + 1}</span>
+        </button>
+    );
+};
+
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   onDeviceConnected,
   onDeviceDisconnected,
@@ -163,32 +197,13 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
             overflowY: 'auto'
         }}>
             {availableDevices.length > 0 ? availableDevices.map((device, index) => (
-            <button
-                key={index}
-                onClick={() => handleDeviceSelect(device)}
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    padding: '12px',
-                    backgroundColor: selectedDevice === device ? 'var(--color-primary)' : 'var(--color-bg-subtle)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-subtle)',
-                    cursor: 'pointer',
-                    color: 'var(--color-text-main)',
-                    transition: 'all 0.2s',
-                    textAlign: 'left'
-                }}
-                onMouseOver={e => {
-                    if (selectedDevice !== device) e.currentTarget.style.backgroundColor = 'var(--color-bg-subtle)';
-                }}
-                onMouseOut={e => {
-                    if (selectedDevice !== device) e.currentTarget.style.backgroundColor = 'var(--color-bg-subtle)';
-                }}
-            >
-                <span style={{ fontWeight: 600, fontSize: '14px' }}>{device.name}</span>
-                <span style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{device.manufacturer} - Port {index + 1}</span>
-            </button>
+                <DeviceButton
+                    key={index}
+                    index={index}
+                    device={device}
+                    isSelected={selectedDevice === device}
+                    onClick={() => handleDeviceSelect(device)}
+                />
             )) : (
                 <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-dim)', fontSize: '13px' }}>
                     No devices detected.

@@ -9,6 +9,20 @@ interface SliderProps {
   valueDisplay?: React.ReactNode;
 }
 
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--color-text-dim)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: 500,
+  marginBottom: '8px'
+};
+
+const CODE_STYLE: React.CSSProperties = {
+  fontFamily: "'Space Mono', monospace",
+  fontSize: '13px'
+};
+
 export const Slider: React.FC<SliderProps> = ({ 
   value, 
   min, 
@@ -22,11 +36,10 @@ export const Slider: React.FC<SliderProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {label && <span className="text-label">{label}</span>}
+        {label && <span style={LABEL_STYLE}>{label}</span>}
         {valueDisplay && (
           <code 
-            className="text-code" 
-            style={{ color: isChanged ? 'var(--color-accent)' : 'var(--color-text-dim)' }}
+            style={{ ...CODE_STYLE, color: isChanged ? 'var(--color-accent)' : 'var(--color-text-dim)' }}
           >
             {valueDisplay}
           </code>

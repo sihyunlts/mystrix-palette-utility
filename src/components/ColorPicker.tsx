@@ -7,6 +7,14 @@ interface ColorPickerProps {
   size?: number;
 }
 
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: '10px',
+  color: 'var(--color-text-dim)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: 500
+};
+
 export const ColorPicker: React.FC<ColorPickerProps> = ({ 
   color, 
   onChange, 
@@ -280,7 +288,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {['r', 'g', 'b'].map((channel) => (
                 <div key={channel} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label className="text-label" style={{ fontSize: '10px' }}>{channel.toUpperCase()}</label>
+                    <label style={LABEL_STYLE}>{channel.toUpperCase()}</label>
                     <input
                     type="number"
                     min="0"

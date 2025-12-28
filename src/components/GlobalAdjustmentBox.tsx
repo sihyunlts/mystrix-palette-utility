@@ -8,6 +8,19 @@ interface GlobalAdjustmentBoxProps {
   onContrastChange: (val: number) => void;
 }
 
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'var(--color-text-dim)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: 500
+};
+
+const CODE_STYLE: React.CSSProperties = {
+  fontFamily: "'Space Mono', monospace",
+  fontSize: '13px'
+};
+
 export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({ 
   saturation, 
   contrast, 
@@ -29,12 +42,12 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
       width: '100%'
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '70px' }}>
-        <span className="text-label" style={{ fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Global</span>
+        <span style={LABEL_STYLE}>Global</span>
         {hasChanges && (
           <div 
             onClick={handleReset}
-            className="text-code"
             style={{ 
+              ...CODE_STYLE,
               cursor: 'pointer', 
               color: 'var(--color-danger)', 
               fontSize: '11px',

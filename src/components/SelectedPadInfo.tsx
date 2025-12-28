@@ -8,6 +8,19 @@ interface SelectedPadInfoProps {
   onColorChange: (color: Color) => void;
 }
 
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'var(--color-text-dim)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: 500
+};
+
+const CODE_STYLE: React.CSSProperties = {
+  fontFamily: "'Space Mono', monospace",
+  fontSize: '13px'
+};
+
 export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({ 
   selectedIndex, 
   color, 
@@ -24,10 +37,10 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
       border: '1px solid var(--color-border)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span className="text-label" style={{ minWidth: '80px', fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Selected Pad</span>
+        <span style={{ ...LABEL_STYLE, minWidth: '80px' }}>Selected Pad</span>
         <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--color-border)', margin: '0 12px' }} />
         
-        <span className="text-code" style={{ fontSize: '16px', color: 'var(--color-text-main)', minWidth: '30px' }}>
+        <span style={{ ...CODE_STYLE, fontSize: '16px', color: 'var(--color-text-main)', minWidth: '30px' }}>
           {selectedIndex !== undefined ? selectedIndex : '---'}
         </span>
       </div>
@@ -46,8 +59,8 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span className="text-label" style={{ fontSize: '11px', color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>RGB Value</span>
-          <code className="text-code" style={{ color: 'var(--color-text-main)' }}>
+          <span style={LABEL_STYLE}>RGB Value</span>
+          <code style={{ ...CODE_STYLE, color: 'var(--color-text-main)' }}>
             {selectedIndex !== undefined 
               ? `${color.r}, ${color.g}, ${color.b}`
               : '-, -, -'}

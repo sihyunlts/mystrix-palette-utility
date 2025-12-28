@@ -194,7 +194,60 @@ const preloadSystemMIDI = async () => {
 };
 preloadSystemMIDI();
 
+const InfoBadge: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onClick }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        position: 'absolute',
+        right: '8px',
+        width: '20px',
+        height: '20px',
+        borderRadius: '50%',
+        border: `1px solid ${isHovered ? 'var(--color-primary)' : 'var(--color-border)'}`,
+        backgroundColor: isHovered ? 'rgba(65, 113, 255, 0.05)' : 'transparent',
+        color: isHovered ? 'var(--color-primary)' : 'var(--color-text-dim)',
+        fontSize: '11px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        padding: 0,
+        zIndex: 2
+      }}
+    >
+      i
+    </button>
+  );
+};
+
+const useWindowWidth = () => {
+  const [width, setWidth] = React.useState(window.innerWidth);
+  React.useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return width;
+};
+
 const AppContent: React.FC = () => {
+    const width = useWindowWidth();
+    const isMobile = width <= 900;
+    const isSmallMobile = width <= 600;
+
+    const LABEL_STYLE: React.CSSProperties = {
+      fontSize: '12px',
+      color: 'var(--color-text-dim)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      fontWeight: 500
+    };
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
@@ -531,9 +584,13 @@ const AppContent: React.FC = () => {
           </h1>
         </header>
 
-        <main className="layout-grid">
+        <main style={{ 
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '320px 1fr',
+            gap: '24px'
+        }}>
           {/* Left Column: Branding and Connection */}
-          <aside className="sidebar" style={{ 
+          <aside style={{ 
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
@@ -541,7 +598,9 @@ const AppContent: React.FC = () => {
             backgroundColor: 'var(--color-bg-surface)',
             borderRadius: 'var(--radius-main)',
             border: '1px solid var(--color-border)',
-            height: 'fit-content'
+            height: 'fit-content',
+            width: isMobile ? '100%' : '320px',
+            order: isMobile ? -1 : 0
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
@@ -553,7 +612,7 @@ const AppContent: React.FC = () => {
               paddingTop: '20px',
               borderTop: '1px solid var(--color-border)'
             }}>
-              <div className="text-label" style={{ marginBottom: '12px' }}>
+              <div style={LABEL_STYLE}>
                 Device Connection
               </div>
               <MIDIConnection
@@ -568,7 +627,7 @@ const AppContent: React.FC = () => {
               paddingTop: '20px',
               borderTop: '1px solid var(--color-border)'
             }}>
-              <div className="text-label" style={{ marginBottom: '12px' }}>
+              <div style={LABEL_STYLE}>
                 Lightshow Preview
               </div>
               
@@ -649,7 +708,17 @@ const AppContent: React.FC = () => {
                 )}
               </div>
 
-              <div className="controls-row">
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap',
+                gap: '12px',
+                paddingTop: '30px',
+                borderTop: '1px solid var(--color-border)',
+                marginTop: '20px',
+                justifyContent: 'space-between',
+                flexDirection: isSmallMobile ? 'column' : 'row',
+                alignItems: isSmallMobile ? 'stretch' : 'center'
+              }}>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <DropdownButton 
                       label="Upload to..." 
@@ -694,7 +763,7 @@ const AppContent: React.FC = () => {
               borderRadius: 'var(--radius-main)',
               border: '1px solid var(--color-border)',
             }}>
-              <div className="text-label" style={{ marginBottom: '16px' }}>
+              <div style={{ ...LABEL_STYLE, marginBottom: '16px' }}>
                 Palette Presets
               </div>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -702,18 +771,13 @@ const AppContent: React.FC = () => {
                   <div key={preset.id} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <Button
                       variant="ghost"
+                      active={palette.name === preset.name}
                       onClick={() => handleApplyPreset(preset.url, preset.name)}
-                      style={{ 
-                        fontSize: '13px', 
-                        borderColor: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-border)',
-                        backgroundColor: palette.name === preset.name ? 'rgba(65, 113, 255, 0.1)' : 'transparent',
-                        color: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-text-main)',
-                        paddingRight: '36px'
-                      }}
+                      style={{ fontSize: '13px', paddingRight: '36px' }}
                     >
                       {preset.name}
                     </Button>
-                    <button
+                    <InfoBadge
                       onClick={(e) => {
                         e.stopPropagation();
                         showModal({
@@ -722,37 +786,7 @@ const AppContent: React.FC = () => {
                           type: 'alert'
                         });
                       }}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        border: '1px solid var(--color-border)',
-                        backgroundColor: 'transparent',
-                        color: 'var(--color-text-dim)',
-                        fontSize: '11px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        padding: 0,
-                        zIndex: 2
-                      }}
-                      onMouseOver={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-primary)';
-                        e.currentTarget.style.color = 'var(--color-primary)';
-                        e.currentTarget.style.backgroundColor = 'rgba(65, 113, 255, 0.05)';
-                      }}
-                      onMouseOut={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-border)';
-                        e.currentTarget.style.color = 'var(--color-text-dim)';
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      i
-                    </button>
+                    />
                   </div>
                 ))}
               </div>
