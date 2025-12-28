@@ -52,7 +52,7 @@
   flex-wrap: wrap;
   gap: 12px;
   padding-top: 30px;
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-border);
   margin-top: 20px;
   justify-content: space-between;
 }
