@@ -33,14 +33,34 @@ const DeviceButton: React.FC<{
                 cursor: 'pointer',
                 color: 'var(--color-text-main)',
                 transition: 'all 0.2s',
-                textAlign: 'left',
+                gap: '4px',
                 width: '100%'
             }}
         >
-            <span style={{ fontWeight: 600, fontSize: '14px' }}>{device.name}</span>
-            <span style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{device.manufacturer} - Port {index + 1}</span>
+            <span>{device.name}</span>
+            <span className="text-label">{device.manufacturer} - Port {index + 1}</span>
         </button>
     );
+};
+
+const SectionHeader: React.FC<{
+    buttonText: string;
+    onButtonClick: () => void;
+}> = ({ buttonText, onButtonClick }) => {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-main)'}}>Select Device</h3>
+            <Button onClick={onButtonClick} variant="ghost" style={{ padding: '4px 8px', fontSize: '12px' }}>
+                ↻ {buttonText}
+            </Button>
+        </div>
+    );
+};
+
+const containerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px'
 };
 
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
@@ -150,31 +170,35 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   }
 
   if (isConnected) {
+    const deviceIndex = availableDevices.findIndex(d => (d as any).id === (selectedDevice as any)?.id);
+    const portNumber = deviceIndex !== -1 ? deviceIndex + 1 : '?';
+    
     return (
-      <div>
+      <div style={containerStyle}>
+        <SectionHeader buttonText="Disconnect" onButtonClick={handleRefresh} />
+        
         <div style={{ 
-            color: 'var(--color-accent)', 
-            marginBottom: '16px', 
-            fontWeight: 600,
-            fontSize: '14px' 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            padding: '12px',
+            backgroundColor: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-accent)',
+            borderRadius: 'var(--radius-subtle)',
+            color: 'var(--color-text-main)',
+            gap: '4px',
+            width: '100%',
         }}>
-          ● Connected to <br /> {deviceName}
+          <span style={{ color: 'var(--color-accent)' }}>{deviceName}</span>
+          <span className="text-label">{selectedDevice?.manufacturer} - Port {portNumber}</span>
         </div>
-        <Button onClick={handleRefresh} variant="secondary">
-          Disconnect & Change
-        </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-main)', opacity: 0.8 }}>Select Device</h3>
-        <Button onClick={handleRefresh} variant="ghost" style={{ padding: '4px 8px', fontSize: '12px' }}>
-            ↻ Refresh
-        </Button>
-      </div>
+    <div style={containerStyle}>
+      <SectionHeader buttonText="Refresh" onButtonClick={handleRefresh} />
 
       {error ? (
         <div style={{ 

@@ -49,15 +49,20 @@ code {
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+span {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
 .text-label {
   font-size: 12px;
   color: var(--color-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   font-weight: 500;
+  line-height: 16px;
 }
 
 .text-code {
   font-family: 'Space Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
 }

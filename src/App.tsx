@@ -612,9 +612,6 @@ const AppContent: React.FC = () => {
               paddingTop: '20px',
               borderTop: '1px solid var(--color-border)'
             }}>
-              <div style={LABEL_STYLE}>
-                Device Connection
-              </div>
               <MIDIConnection
                 onDeviceConnected={handleDeviceConnected}
                 onDeviceDisconnected={handleDeviceDisconnected}
