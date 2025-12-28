@@ -19,7 +19,6 @@ interface PadProps {
   isLightshowActive?: boolean;
 }
 
-// Meticulously preserve the "Version 3" Lighting Math
 const gamma = 0.6;
 const applyGamma = (c: number) => Math.pow(c / 255, gamma) * 255;
 const baseGray = 70;
@@ -99,19 +98,18 @@ const Pad = memo(({
     pathD = `M${min+sR},${min} H${max-sR} Q${max},${min} ${max},${min+sR} V${max-sR} Q${max},${max} ${max-sR},${max} H${min+sR} Q${min},${max} ${min},${max-sR} V${min+sR} Q${min},${min} ${min+sR},${min} Z`;
   }
 
-  const baseGradId = `base-grad-${index}`;
+  const paletteGradId = `palette-grad-${index}`;
   const offGradId = `off-grad-${index}`;
   const lightshowGradId = `ls-grad-${index}`;
 
   return (
     <div
       style={{
-        width: '100%',
-        height: '100%', // Explicit height for aspect ratio stability
+        height: '100%',
         aspectRatio: '1 / 1',
         position: 'relative',
-        transition: isLightshowActive ? 'none' : 'all 0.1s ease-out',
-        transform: isSelected ? 'scale(1.02)' : 'scale(1)', // Slight reduction to prevent excessive overflow
+        transition: isLightshowActive ? 'none' : 'all 0.15s ease-out',
+        transform: isSelected ? 'scale(1.1)' : 'scale(1)', // Slight reduction to prevent excessive overflow
         zIndex: isSelected ? 10 : 1,
         willChange: 'transform, filter', // Promote to GPU layer for smoother SVG filters
       }}
@@ -120,9 +118,6 @@ const Pad = memo(({
       <svg 
         viewBox="-5 -5 110 110" 
         style={{ 
-          width: '100%', 
-          height: '100%', 
-          overflow: 'visible',
           filter: (() => {
             const size = isSelected ? 6 : (lightshowColorData ? 4 : 2);
             const color = lightshowColorData 
@@ -130,24 +125,24 @@ const Pad = memo(({
               : (isLightshowActive ? offColors.glow : baseColors.glow);
             return `drop-shadow(0 0 ${size}px ${color})`;
           })(),
-          transition: isLightshowActive ? 'none' : 'filter 0.2s ease-out' 
         }}
       >
         <defs>
-          <radialGradient id={baseGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
+          {/* Palette LED */}
+          <radialGradient id={paletteGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
             <stop offset="0%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="30%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="70%" stopColor={baseColors.mid} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="100%" stopColor={baseColors.edge} style={{ transition: 'stop-color 0.08s' }} />
           </radialGradient>
-          <radialGradient id={offGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
+          <radialGradient id={offGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
             <stop offset="0%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="30%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="70%" stopColor={offColors.mid} style={{ transition: 'stop-color 0.08s' }} />
             <stop offset="100%" stopColor={offColors.edge} style={{ transition: 'stop-color 0.08s' }} />
           </radialGradient>
           {lightshowColorsSet && (
-            <radialGradient id={lightshowGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
+            <radialGradient id={lightshowGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
               <stop offset="0%" stopColor={lightshowColorsSet.core} />
               <stop offset="30%" stopColor={lightshowColorsSet.core} />
               <stop offset="70%" stopColor={lightshowColorsSet.mid} />
@@ -156,21 +151,18 @@ const Pad = memo(({
           )}
         </defs>
         
-        {/* Bottom Layer: Always "Off" (Index 0) Structure */}
+        {/* MIDI Keymatt */}
         <path
           d={pathD}
           fill={`url(#${offGradId})`}
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
         />
 
-        {/* Foreground Layer: Current Palette Colors */}
+        {/* Palette LED & Outline when Selected */}
         <path
           d={pathD}
-          fill={`url(#${baseGradId})`}
+          fill={`url(#${paletteGradId})`}
           fillOpacity={isLightshowActive ? 0 : 1}
-          stroke={isSelected && !isLightshowActive ? "#fff" : "none"}
+          stroke={isSelected ? "#fff" : "none"}
           strokeWidth={isSelected ? 4 : 0}
           strokeLinejoin="round"
           style={{ 
@@ -178,21 +170,19 @@ const Pad = memo(({
           }}
         />
 
-        {/* Lightshow Override Layer */}
+        {/* MIDI LED */}
         {lightshowColorsSet && (
           <path
             d={pathD}
             fill={`url(#${lightshowGradId})`}
-            stroke="none"
-            strokeWidth={0}
-            strokeLinejoin="round"
             style={{ 
-              transition: 'none', // MIDI Lightshow should always be snappy
+              transition: 'none', // MIDI Lightshow should always be non-transitioning
               opacity: lightshowColorData ? 1 : 0 
             }}
           />
         )}
 
+        {/* Outline */}
         <path
           d={pathD}
           fill="none"
@@ -200,7 +190,7 @@ const Pad = memo(({
           strokeWidth="2"
           pointerEvents="none"
           style={{ 
-            clipPath: 'inset(1% 1% 4% 1%)',
+            clipPath: 'inset(1% 1% 2% 1%)',
           }}
         />
       </svg>
@@ -236,33 +226,26 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
   isLightshowActive
 }) => {
   const baseColors = palette.colors;
-  const gapSize = '0.4%'; // Percentage-based gap for proportional scaling
 
-  const renderHardwareBlock = (startIdx: number, title: string) => (
+  const mystrixHousing = (startIdx: number, title: string) => (
     <div style={{ textAlign: 'center', flex: '1 1 360px' }}>
       <div style={{
         backgroundColor: 'var(--color-bg-surface-alt)',
-        padding: '3.4%', // Percentage-based padding for proportional scaling
+        padding: '3.4%',
         borderRadius: 'var(--radius-main)',
         border: '1px solid var(--color-bg-surface)',
         boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), var(--shadow-pad)',
         width: '100%',
-        aspectRatio: '1 / 1', // Mandatory square frame
-        boxSizing: 'border-box',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative'
+        aspectRatio: '1 / 1',
       }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(8, 1fr)`,
           gridTemplateRows: `repeat(8, 1fr)`,
-          gap: gapSize,
+          gap: '0.4%',
           width: '100%',
           height: '100%',
           aspectRatio: '1 / 1',
-          boxSizing: 'border-box'
         }}>
           {Array.from({ length: 64 }, (_, i) => {
             const idx = startIdx + i;
@@ -293,8 +276,8 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
       justifyContent: 'center',
       flexWrap: 'wrap' // Allow wrapping on small screens
     }}>
-      {renderHardwareBlock(0, '0-63')}
-      {renderHardwareBlock(64, '64-127')}
+      {mystrixHousing(0, '0-63')}
+      {mystrixHousing(64, '64-127')}
     </div>
   );
 };

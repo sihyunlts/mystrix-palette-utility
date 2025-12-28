@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
 import { MIDIConnection } from './components/MIDIConnection';
-import { PaletteGrid } from './components/PaletteGrid';
+import { PaletteGrid } from './components/MystrixPreview';
 import { DropdownButton } from './components/DropdownButton';
 import { Button } from './components/Button';
 import { ModalProvider, useModal } from './components/Modal';
