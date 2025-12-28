@@ -135,16 +135,16 @@ const Pad = memo(({
       >
         <defs>
           <radialGradient id={baseGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="30%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="70%" stopColor={baseColors.mid} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="100%" stopColor={baseColors.edge} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
+            <stop offset="0%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="30%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="70%" stopColor={baseColors.mid} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="100%" stopColor={baseColors.edge} style={{ transition: 'stop-color 0.08s' }} />
           </radialGradient>
           <radialGradient id={offGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor={offColors.core} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="30%" stopColor={offColors.core} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="70%" stopColor={offColors.mid} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
-            <stop offset="100%" stopColor={offColors.edge} style={{ transition: 'stop-color 0.25s ease-in-out' }} />
+            <stop offset="0%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="30%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="70%" stopColor={offColors.mid} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="100%" stopColor={offColors.edge} style={{ transition: 'stop-color 0.08s' }} />
           </radialGradient>
           {lightshowColorsSet && (
             <radialGradient id={lightshowGradId} cx="50%" cy="50%" r="71%" fx="50%" fy="50%">
@@ -174,7 +174,7 @@ const Pad = memo(({
           strokeWidth={isSelected ? 4 : 0}
           strokeLinejoin="round"
           style={{ 
-            transition: 'all 0.25s ease-in-out',
+            transition: 'all 0.08s',
           }}
         />
 

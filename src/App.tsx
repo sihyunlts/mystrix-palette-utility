@@ -393,9 +393,9 @@ const AppContent: React.FC = () => {
       lightshowPlayerRef.current = player;
       player.setMidi(midiObj);
       
-      // 3. Timing Orchestration: Wait for palette fade-out (0.25s) before starting MIDI
+      // 3. Timing Orchestration: Wait for palette fade-out (0.08s) before starting MIDI
       if (playbackId === currentPlaybackIdRef.current) {
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 100));
       }
 
       // Final Race Check before starting the animation loop
