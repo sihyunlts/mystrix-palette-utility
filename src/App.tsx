@@ -16,14 +16,23 @@ import { Midi } from '@tonejs/midi';
 // Dynamic Preset Loader
 // Scan src/presets for any files and treat them as palette data
 const presetsContext = (require as any).context('./presets', false, /.*/);
+const PRESET_DESCRIPTIONS: Record<string, string> = {
+  'novation_rg': 'The Red and Green only palette used by early Novation Launchpads.',
+  'novation_rgb': 'The modern full RGB palette applied by default to all RGB Launchpads after the Launchpad MK2.',
+  'mat1jaczyyy': 'A custom-tuned RGB palette by mat1jaczyyy.',
+  'sihyunlights': 'A palette nearly identical to the Novation RGB palette, but with the 71st color adjusted to be darker.'
+};
+
 const INITIAL_PRESETS = presetsContext.keys()
-  .filter((key: string) => !key.endsWith('.ts') && !key.endsWith('.js')) // Ignore source files
+  .filter((key: string) => !key.endsWith('.ts') && !key.endsWith('.js'))
   .map((key: string) => {
+    const id = key.replace('./', '').replace(/\.[^/.]+$/, "").toLowerCase();
     const name = key.replace('./', '').replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
     return {
       id: key,
       name: name,
-      url: presetsContext(key) // Webpack returns the asset URL
+      description: PRESET_DESCRIPTIONS[id] || 'A custom palette preset for Mystrix.',
+      url: presetsContext(key)
     };
   });
 
@@ -690,19 +699,61 @@ const AppContent: React.FC = () => {
               </div>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {INITIAL_PRESETS.map((preset: any) => (
-                  <Button
-                    key={preset.id}
-                    variant="ghost"
-                    onClick={() => handleApplyPreset(preset.url, preset.name)}
-                    style={{ 
-                      fontSize: '13px', 
-                      borderColor: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-border)',
-                      backgroundColor: palette.name === preset.name ? 'rgba(65, 113, 255, 0.1)' : 'transparent',
-                      color: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-text-main)'
-                    }}
-                  >
-                    {preset.name}
-                  </Button>
+                  <div key={preset.id} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleApplyPreset(preset.url, preset.name)}
+                      style={{ 
+                        fontSize: '13px', 
+                        borderColor: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-border)',
+                        backgroundColor: palette.name === preset.name ? 'rgba(65, 113, 255, 0.1)' : 'transparent',
+                        color: palette.name === preset.name ? 'var(--color-primary)' : 'var(--color-text-main)',
+                        paddingRight: '36px'
+                      }}
+                    >
+                      {preset.name}
+                    </Button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showModal({
+                          title: preset.name,
+                          message: preset.description,
+                          type: 'alert'
+                        });
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'transparent',
+                        color: 'var(--color-text-dim)',
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        padding: 0,
+                        zIndex: 2
+                      }}
+                      onMouseOver={e => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                        e.currentTarget.style.backgroundColor = 'rgba(65, 113, 255, 0.05)';
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.borderColor = 'var(--color-border)';
+                        e.currentTarget.style.color = 'var(--color-text-dim)';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      i
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
