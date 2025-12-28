@@ -75,6 +75,7 @@ export class MatrixOSMIDI {
 export class MIDIManager {
   private static instance: MIDIManager;
   private devices: MIDIOutput[] = [];
+  private listeners: Set<() => void> = new Set();
 
   static getInstance(): MIDIManager {
     if (!MIDIManager.instance) {
@@ -96,7 +97,17 @@ export class MIDIManager {
     // Listen for device changes
     access.addEventListener('statechange', () => {
       this.devices = Array.from(access.outputs.values());
+      this.notifyListeners();
     });
+  }
+
+  addListener(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener());
   }
 
   getDevices(): MIDIOutput[] {

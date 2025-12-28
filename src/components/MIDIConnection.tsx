@@ -23,9 +23,41 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
   const midiManager = MIDIManager.getInstance();
 
+  // Sync ref for the listener to avoid dependency loops
+  const selectedDeviceRef = React.useRef(selectedDevice);
   useEffect(() => {
+    selectedDeviceRef.current = selectedDevice;
+  }, [selectedDevice]);
+
+  useEffect(() => {
+    // Initial load
     initializeMIDI(true);
-  }, []);
+
+    // Subscribe to MIDI state changes (plug/unplug)
+    const removeListener = midiManager.addListener(() => {
+      const devices = midiManager.getDevices();
+      setAvailableDevices(devices);
+      
+      const currentSelected = selectedDeviceRef.current;
+      
+      // Auto-disconnect if unplugged
+      if (currentSelected && !devices.find(d => (d as any).id === (currentSelected as any).id)) {
+        handleDeviceSelect(null);
+        setError('Device disconnected');
+      } 
+      // Auto-connect if Mystrix found and no device selected
+      else if (!currentSelected) {
+        const targetDevice = devices.find(d => 
+          d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
+        );
+        if (targetDevice) {
+           handleDeviceSelect(targetDevice);
+        }
+      }
+    });
+
+    return () => removeListener();
+  }, []); // Run once on mount
 
   const initializeMIDI = async (autoConnect: boolean = false) => {
     try {
