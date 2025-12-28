@@ -1,23 +1,38 @@
 import { Midi } from "@tonejs/midi";
 
-export interface LightshowEvent {
+export interface HardwareLightshowEvent {
   index: number;
   velocity: number;
-  on: boolean;
+  timestamp: number; // performance.now() + offset
+}
+
+export interface UILightshowEvent {
+  index: number;
+  velocity: number;
 }
 
 export class LightshowPlayer {
   private midi: Midi | null = null;
   private timer: number | null = null;
   private isPlaying: boolean = false;
-  private onEvent: (events: LightshowEvent[]) => void;
+  private onHardwareEvent: (events: HardwareLightshowEvent[]) => void;
+  private onUIEvent: (events: UILightshowEvent[]) => void;
   private onFinished?: () => void;
   private events: { time: number; index: number; velocity: number; on: boolean }[] = [];
   private startTime: number = 0;
-  private eventIndex: number = 0;
+  private hardwareEventIndex: number = 0;
+  private uiEventIndex: number = 0;
+  
+  // 50ms look-ahead for hardware to ignore main-thread jitter
+  private readonly LOOK_AHEAD_MS = 100;
 
-  constructor(onEvent: (events: LightshowEvent[]) => void, onFinished?: () => void) {
-    this.onEvent = onEvent;
+  constructor(
+    onHardwareEvent: (events: HardwareLightshowEvent[]) => void, 
+    onUIEvent: (events: UILightshowEvent[]) => void,
+    onFinished?: () => void
+  ) {
+    this.onHardwareEvent = onHardwareEvent;
+    this.onUIEvent = onUIEvent;
     this.onFinished = onFinished;
   }
 
@@ -25,22 +40,28 @@ export class LightshowPlayer {
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
     this.midi = new Midi(arrayBuffer as any);
+    return this.midi;
   }
 
   async loadArrayBuffer(arrayBuffer: ArrayBuffer) {
     this.midi = new Midi(arrayBuffer as any);
+    return this.midi;
+  }
+
+  setMidi(midi: Midi) {
+    this.midi = midi;
   }
 
   play() {
     if (!this.midi || this.isPlaying) return;
     this.isPlaying = true;
     this.startTime = performance.now();
-    this.eventIndex = 0;
+    this.hardwareEventIndex = 0;
+    this.uiEventIndex = 0;
 
     const tracks = this.midi.tracks;
     this.events = [];
 
-    // Collect all note events
     tracks.forEach(track => {
       track.notes.forEach(note => {
         this.events.push({
@@ -58,9 +79,7 @@ export class LightshowPlayer {
       });
     });
 
-    // Sort events by time
     this.events.sort((a, b) => a.time - b.time);
-
     this.timer = requestAnimationFrame(this.tick);
   }
 
@@ -76,25 +95,51 @@ export class LightshowPlayer {
     if (!this.isPlaying) return;
     const now = performance.now() - this.startTime;
 
-    const batch: LightshowEvent[] = [];
-
-    while (this.eventIndex < this.events.length && this.events[this.eventIndex].time <= now) {
-      const event = this.events[this.eventIndex];
-      batch.push({
+    // 1. Hardware Look-ahead scheduling
+    const hardwareBatch: HardwareLightshowEvent[] = [];
+    while (
+      this.hardwareEventIndex < this.events.length && 
+      this.events[this.hardwareEventIndex].time <= now + this.LOOK_AHEAD_MS
+    ) {
+      const event = this.events[this.hardwareEventIndex];
+      hardwareBatch.push({
         index: event.index,
         velocity: event.velocity,
-        on: event.on
+        timestamp: this.startTime + event.time
       });
-      this.eventIndex++;
+      this.hardwareEventIndex++;
     }
 
-    if (batch.length > 0) {
-      this.onEvent(batch);
+    if (hardwareBatch.length > 0) {
+      this.onHardwareEvent(hardwareBatch);
     }
 
-    if (this.eventIndex >= this.events.length) {
-      this.stop();
-      this.onFinished?.();
+    // 2. UI Frame-sync processing (immediate)
+    const uiBatch: UILightshowEvent[] = [];
+    while (
+      this.uiEventIndex < this.events.length && 
+      this.events[this.uiEventIndex].time <= now
+    ) {
+      const event = this.events[this.uiEventIndex];
+      uiBatch.push({
+        index: event.index,
+        velocity: event.velocity
+      });
+      this.uiEventIndex++;
+    }
+
+    if (uiBatch.length > 0) {
+      this.onUIEvent(uiBatch);
+    }
+
+    // 3. Loop or Finish
+    if (this.uiEventIndex >= this.events.length) {
+      // Small buffer to let the final hardware-sent events play out
+      setTimeout(() => {
+        if (!this.isPlaying) return;
+        this.stop();
+        this.onFinished?.();
+      }, 100);
     } else {
       this.timer = requestAnimationFrame(this.tick);
     }

@@ -110,9 +110,10 @@ const Pad = memo(({
         height: '100%', // Explicit height for aspect ratio stability
         aspectRatio: '1 / 1',
         position: 'relative',
-        transition: 'all 0.1s ease-out',
+        transition: isLightshowActive ? 'none' : 'all 0.1s ease-out',
         transform: isSelected ? 'scale(1.02)' : 'scale(1)', // Slight reduction to prevent excessive overflow
         zIndex: isSelected ? 10 : 1,
+        willChange: 'transform, filter', // Promote to GPU layer for smoother SVG filters
       }}
       onClick={() => onClick?.(index)}
     >
@@ -122,13 +123,14 @@ const Pad = memo(({
           width: '100%', 
           height: '100%', 
           overflow: 'visible',
-          filter: lightshowColorData // Use active data for glow logic
-            ? `drop-shadow(0 0 6px ${getColors(lightshowColorData, false).glow})`
-            : (isLightshowActive 
-                ? `drop-shadow(0 0 2px ${offColors.glow})`
-                : (isSelected ? `drop-shadow(0 0 6px ${baseColors.glow})` : `drop-shadow(0 0 2px ${baseColors.glow})`)
-              ),
-          transition: 'filter 0.2s ease-out' 
+          filter: (() => {
+            const size = isSelected ? 6 : (lightshowColorData ? 4 : 2);
+            const color = lightshowColorData 
+              ? getColors(lightshowColorData, false).glow 
+              : (isLightshowActive ? offColors.glow : baseColors.glow);
+            return `drop-shadow(0 0 ${size}px ${color})`;
+          })(),
+          transition: isLightshowActive ? 'none' : 'filter 0.2s ease-out' 
         }}
       >
         <defs>
@@ -185,8 +187,7 @@ const Pad = memo(({
             strokeWidth={0}
             strokeLinejoin="round"
             style={{ 
-              transition: 'opacity 0.08s ease-out',
-              // Use lightshowColorData existence to toggle opacity, keeping element mounted via effectiveLightshowColor
+              transition: 'none', // MIDI Lightshow should always be snappy
               opacity: lightshowColorData ? 1 : 0 
             }}
           />

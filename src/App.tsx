@@ -9,8 +9,9 @@ import { ModalProvider, useModal } from './components/Modal';
 import { SelectedPadInfo } from './components/SelectedPadInfo';
 import { GlobalAdjustmentBox } from './components/GlobalAdjustmentBox';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
-import { LightshowPlayer, LightshowEvent } from './utils/LightshowPlayer';
+import { LightshowPlayer, HardwareLightshowEvent, UILightshowEvent } from './utils/LightshowPlayer';
 import { applyGlobalSettings } from './utils/colorUtils';
+import { Midi } from '@tonejs/midi';
 
 // Dynamic Preset Loader
 // Scan src/presets for any files and treat them as palette data
@@ -156,6 +157,34 @@ const DEFAULT_PALETTE_COLORS = parsePaletteFile(`0, 0 0 0;
 126, 44 23 0;
 127, 18 5 0;`);
 
+const NOTE_TO_PAD_INDEX: Record<number, number> = (() => {
+  const map: Record<number, number> = {};
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const calNote = c < 4 ? (36 + (7 - r) * 4 + c) : (68 + (7 - r) * 4 + (c - 4));
+      map[calNote] = r * 8 + c;
+    }
+  }
+  return map;
+})();
+
+const MIDI_CACHE: Map<string, ArrayBuffer> = new Map();
+const MIDI_OBJ_CACHE: Map<string, Midi> = new Map();
+
+// Eager load and parse system MIDI files to prevent connection lag
+const preloadSystemMIDI = async () => {
+  try {
+    const source = '/connected.mid';
+    const response = await fetch(source);
+    const arrayBuffer = await response.arrayBuffer();
+    MIDI_CACHE.set(source, arrayBuffer);
+    MIDI_OBJ_CACHE.set(source, new Midi(arrayBuffer));
+  } catch (e) {
+    console.warn('Failed to pre-cache system MIDI:', e);
+  }
+};
+preloadSystemMIDI();
+
 const AppContent: React.FC = () => {
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
@@ -195,150 +224,125 @@ const AppContent: React.FC = () => {
   }, [palette, globalSaturation, globalContrast]);
 
   const mapMIDINoteToPadIndex = useCallback((note: number): number | null => {
-    // Split 4x8 Mapping Logic:
-    // The 8x8 is divided into two 4x8 vertical strips.
-    // Strip 1 (Cols 0-3): Note = 36 + (7-r)*4 + c
-    // Strip 2 (Cols 4-7): Note = 68 + (7-r)*4 + (c-4)
-    
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        let calNote = 0;
-        if (c < 4) {
-          calNote = 36 + (7 - r) * 4 + c;
-        } else {
-          calNote = 68 + (7 - r) * 4 + (c - 4);
-        }
-
-        if (calNote === note) {
-          return r * 8 + c;
-        }
-      }
-    }
-    return null;
+    return NOTE_TO_PAD_INDEX[note] ?? null;
   }, []);
 
 
-
+  const currentPlaybackIdRef = useRef<number>(0);
+  const connectionEpochRef = useRef<number>(0);
 
   const playLightshow = useCallback(async (source: string | File, device?: MIDIOutput) => {
+    const playbackId = ++currentPlaybackIdRef.current;
+    
+    // Stop existing playback immediately
     if (lightshowPlayerRef.current) {
       lightshowPlayerRef.current.stop();
+      lightshowPlayerRef.current = null;
     }
-
+    
+    // Reset state for new playback
+    setLightshowColors(new Map());
     setIsLightshowActive(true);
 
-    // Capture the target output (current state or override)
     const targetOutput = device || midiOutput;
     
-    // activePadCounts is created per playback session to track polyphony
-    const activePadCounts = new Map<number, number>();
-
-    const player = new LightshowPlayer(
-      (events: LightshowEvent[]) => {
-        // Prepare batch updates
-        const nextColorsUpdate = new Map<number, {r: number, g: number, b: number}>();
-        const padsToClear = new Set<number>(); // eslint-disable-line @typescript-eslint/no-unused-vars
-        
-        // 1. Process all events for logical state and physical output
-        events.forEach(event => {
-          const mapped = mapMIDINoteToPadIndex(event.index);
-          
-          // Ref Counting for polyphony
-          if (mapped !== null) {
-            const currentCount = activePadCounts.get(mapped) || 0;
-            let newCount = currentCount;
-            
-            if (event.velocity > 0) {
-              newCount++;
-            } else {
-              newCount = Math.max(0, newCount - 1);
-            }
-            activePadCounts.set(mapped, newCount);
-
-            // Determine action for this pad
-            const color = DEFAULT_PALETTE_COLORS[event.velocity] || { r: 255, g: 255, b: 255 };
-
-            if (event.velocity > 0) {
-                // Note On: Stage update
-                nextColorsUpdate.set(mapped, color);
-                // If we set a color, we ensure it's not marked for clearing in this batch
-                padsToClear.delete(mapped);
-            } else {
-                // Note Off: Only stage clear if ref count is 0
-                if (newCount === 0) {
-                    padsToClear.add(mapped);
-                }
-            }
-          }
-
-          // 2. Send to Physical Hardware (STAY RAW) - Send ALL events immediately
-          if (targetOutput) {
-            targetOutput.send(new Uint8Array([0x90, event.index, event.velocity]));
-          }
-        });
-
-        // 3. Update Virtual UI (React State) - ONCE per batch
-        // We will replay the effective changes from the batch onto the React state
-        setLightshowColors(prev => {
-           const next = new Map(prev);
-           
-           events.forEach(event => {
-             const mapped = mapMIDINoteToPadIndex(event.index);
-             if (mapped === null) return;
-             
-             // Use Default Colors
-             const color = DEFAULT_PALETTE_COLORS[event.velocity] || { r: 255, g: 255, b: 255 };
-             
-             if (event.velocity > 0) {
-                 next.set(mapped, color);
-                 next.set(mapped + 64, color);
-             } else {
-                 if ((activePadCounts.get(mapped) || 0) <= 0) {
-                     next.delete(mapped);
-                     next.delete(mapped + 64);
-                 }
-             }
-           });
-           
-           return next;
-        });
-
-      },
-      async () => {
-        // onFinished callback - orchestrate re-appearance
-        setLightshowColors(new Map()); // 1. Clear override colors
-        await new Promise(r => setTimeout(r, 250)); // 2. Wait for final glows to dissipate
-        setIsLightshowActive(false); // 3. Fade background back in
-      }
-    );
-    
-    // Assign immediately to prevent race conditions during load
-    lightshowPlayerRef.current = player;
-
     try {
-      if (source instanceof File) {
-        const buffer = await source.arrayBuffer();
-        await player.loadArrayBuffer(buffer);
+      let midiObj: any;
+
+      // 1. Data Loading Phase (with nested caching)
+      if (typeof source === 'string') {
+        if (MIDI_OBJ_CACHE.has(source)) {
+          midiObj = MIDI_OBJ_CACHE.get(source);
+        } else {
+          let arrayBuffer: ArrayBuffer;
+          if (MIDI_CACHE.has(source)) {
+            arrayBuffer = MIDI_CACHE.get(source)!;
+          } else {
+            const response = await fetch(source);
+            arrayBuffer = await response.arrayBuffer();
+            MIDI_CACHE.set(source, arrayBuffer);
+          }
+          // The parsing itself is expensive, cache the result
+          midiObj = new Midi(arrayBuffer);
+          MIDI_OBJ_CACHE.set(source, midiObj);
+        }
       } else {
-        await player.load(source);
+        const arrayBuffer = await source.arrayBuffer();
+        midiObj = new Midi(arrayBuffer);
       }
-      
-      // Race condition check: If another lightshow started while we were loading, abort.
-      if (lightshowPlayerRef.current !== player) return;
-      
-      // Orchestrate startup: Fade out first
-      setIsLightshowActive(true); 
-      await new Promise(r => setTimeout(r, 250)); 
-      
-      // Check again after delay
-      if (lightshowPlayerRef.current !== player) return;
 
-      // Then play
-      player.play();
+      // 2. Post-load Race Check: If a newer playback started while fetching/parsing, abort.
+      if (playbackId !== currentPlaybackIdRef.current) return;
 
+      const activePadCounts = new Map<number, number>();
+
+      const player = new LightshowPlayer(
+        (hwEvents: HardwareLightshowEvent[]) => {
+          if (playbackId !== currentPlaybackIdRef.current) return;
+          if (!targetOutput) return;
+
+          hwEvents.forEach(event => {
+             // Add 25ms offset to account for typical React render + browser frame latency
+             targetOutput.send(new Uint8Array([0x90, event.index, event.velocity]), event.timestamp + 25);
+          });
+        },
+        (uiEvents: UILightshowEvent[]) => {
+          if (playbackId !== currentPlaybackIdRef.current) return;
+
+          setLightshowColors(prev => {
+            const next = new Map(prev);
+            uiEvents.forEach(event => {
+              const mapped = mapMIDINoteToPadIndex(event.index);
+              if (mapped === null) return;
+              
+              if (event.velocity > 0) {
+                const color = DEFAULT_PALETTE_COLORS[event.velocity] || { r: 255, g: 255, b: 255 };
+                next.set(mapped, color);
+                next.set(mapped + 64, color);
+
+                // Track polyphony
+                const currentCount = activePadCounts.get(mapped) || 0;
+                activePadCounts.set(mapped, currentCount + 1);
+              } else {
+                const currentCount = activePadCounts.get(mapped) || 0;
+                const newCount = Math.max(0, currentCount - 1);
+                activePadCounts.set(mapped, newCount);
+
+                if (newCount <= 0) {
+                  next.delete(mapped);
+                  next.delete(mapped + 64);
+                }
+              }
+            });
+            return next;
+          });
+        },
+        async () => {
+          if (playbackId === currentPlaybackIdRef.current) {
+            setLightshowColors(new Map());
+            await new Promise(r => setTimeout(r, 250));
+            if (playbackId === currentPlaybackIdRef.current) {
+              setIsLightshowActive(false);
+            }
+          }
+        }
+      );
+
+      lightshowPlayerRef.current = player;
+      player.setMidi(midiObj);
+      
+      // 3. Timing Orchestration: Wait for palette fade-out (0.25s) before starting MIDI
+      if (playbackId === currentPlaybackIdRef.current) {
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      // Final Race Check before starting the animation loop
+      if (playbackId === currentPlaybackIdRef.current) {
+        player.play();
+      }
     } catch (error) {
-      console.warn(`Failed to load lightshow ${source}:`, error);
-      if (lightshowPlayerRef.current === player) {
+      console.warn(`Failed to play lightshow ${source}:`, error);
+      if (playbackId === currentPlaybackIdRef.current) {
         setIsLightshowActive(false);
       }
     }
@@ -353,9 +357,18 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  const handleDeviceConnected = (device: MIDIOutput) => {
+  const handleDeviceConnected = async (device: MIDIOutput) => {
+    const epoch = ++connectionEpochRef.current;
+    
+    // Stabilization delay (allows OS/Browser MIDI enumeration to settle)
+    await new Promise(r => setTimeout(r, 400));
+    
+    // Check if this connection attempt is still the most recent one
+    if (epoch !== connectionEpochRef.current) return;
+
     setMidiOutput(device);
     setMatrixOS(new MatrixOSMIDI(device));
+    setSelectedDevice(device); // Sync the selection state
     playLightshow('/connected.mid', device);
   };
 
@@ -370,6 +383,8 @@ const AppContent: React.FC = () => {
     if (device) {
       setMidiOutput(device);
       setMatrixOS(new MatrixOSMIDI(device));
+      // Manual selection also triggers the welcome lightshow
+      playLightshow('/connected.mid', device);
     } else {
       setMidiOutput(null);
       setMatrixOS(null);

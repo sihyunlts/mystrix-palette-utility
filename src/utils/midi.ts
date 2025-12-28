@@ -76,6 +76,7 @@ export class MIDIManager {
   private static instance: MIDIManager;
   private devices: MIDIOutput[] = [];
   private listeners: Set<() => void> = new Set();
+  private isInitialized: boolean = false;
 
   static getInstance(): MIDIManager {
     if (!MIDIManager.instance) {
@@ -85,6 +86,8 @@ export class MIDIManager {
   }
 
   async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
     if (!navigator.requestMIDIAccess) {
       throw new Error('Web MIDI API not supported');
     }
@@ -99,6 +102,8 @@ export class MIDIManager {
       this.devices = Array.from(access.outputs.values());
       this.notifyListeners();
     });
+
+    this.isInitialized = true;
   }
 
   addListener(listener: () => void): () => void {
