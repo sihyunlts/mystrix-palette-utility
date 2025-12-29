@@ -84,7 +84,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
       
       if (devices.length === 0) {
         setError(t('messages.noDevices'));
-      } else if (autoConnect) {
+      } else if (autoConnect && !selectedDeviceRef.current) {
         const targetDevice = devices.find(d => 
           d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
         );
