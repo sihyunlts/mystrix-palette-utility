@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MIDIManager } from '../utils/midi';
 import { SectionHeader } from './SectionHeader';
 import styles from './MIDIConnection.module.css';
@@ -39,6 +40,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   selectedDevice,
   onDeviceSelect
 }) => {
+  const { t } = useTranslation();
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +48,15 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
   const midiManager = MIDIManager.getInstance();
 
-  // Sync ref for the listener to avoid dependency loops
+  // Sync refs for listeners to avoid dependency loops
+  const onDeviceConnectedRef = React.useRef(onDeviceConnected);
+  const onDeviceDisconnectedRef = React.useRef(onDeviceDisconnected);
+  
+  useEffect(() => {
+    onDeviceConnectedRef.current = onDeviceConnected;
+    onDeviceDisconnectedRef.current = onDeviceDisconnected;
+  }, [onDeviceConnected, onDeviceDisconnected]);
+
   const selectedDeviceRef = React.useRef(selectedDevice);
   useEffect(() => {
     selectedDeviceRef.current = selectedDevice;
@@ -56,12 +66,12 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     onDeviceSelect(device);
     if (device) {
       setIsConnected(true);
-      onDeviceConnected(device);
+      onDeviceConnectedRef.current(device);
     } else {
       setIsConnected(false);
-      onDeviceDisconnected();
+      onDeviceDisconnectedRef.current();
     }
-  }, [onDeviceSelect, onDeviceConnected, onDeviceDisconnected]);
+  }, [onDeviceSelect]);
 
   const initializeMIDI = React.useCallback(async (autoConnect: boolean = false) => {
     try {
@@ -73,7 +83,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
       setAvailableDevices(devices);
       
       if (devices.length === 0) {
-        setError('No MIDI devices found.');
+        setError(t('messages.noDevices'));
       } else if (autoConnect) {
         const targetDevice = devices.find(d => 
           d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
@@ -83,11 +93,11 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
         }
       }
     } catch (err) {
-      setError('Web MIDI API not supported or access denied.');
+      setError(t('messages.webMidiError'));
     } finally {
       setIsLoading(false);
     }
-  }, [handleDeviceSelect, midiManager]);
+  }, [handleDeviceSelect, midiManager, t]);
 
   useEffect(() => {
     // Initial load
@@ -103,7 +113,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
       // Auto-disconnect if unplugged
       if (currentSelected && !devices.find(d => (d as any).id === (currentSelected as any).id)) {
         handleDeviceSelect(null);
-        setError('Device disconnected');
+        setError(t('messages.deviceDisconnected'));
       } 
       // Auto-connect if Mystrix found and no device selected
       else if (!currentSelected) {
@@ -117,7 +127,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     });
 
     return () => removeListener();
-  }, [initializeMIDI, handleDeviceSelect, midiManager]); // Updated dependencies
+  }, [initializeMIDI, handleDeviceSelect, midiManager, t]); // Updated dependencies
 
   const handleRefresh = React.useCallback(() => {
     setIsConnected(false);
@@ -130,7 +140,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   if (isLoading) {
     return (
       <div className={styles.loadingBox}>
-        <div>Initializing MIDI...</div>
+        <div>{t('messages.initializing')}</div>
       </div>
     );
   }
@@ -141,8 +151,8 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     return (
       <div className={styles.container}>
         <SectionHeader 
-          title="Select Device" 
-          buttonText="Disconnect" 
+          title={t('sections.device')}
+          buttonText={t('buttons.disconnect')}
           onButtonClick={handleRefresh} 
           icon="link-slash"
         />
@@ -162,8 +172,8 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   return (
     <div className={styles.container}>
       <SectionHeader 
-        title="Select Device" 
-        buttonText="Refresh" 
+        title={t('sections.device')}
+        buttonText={t('buttons.refresh')}
         onButtonClick={handleRefresh} 
         icon="rotate"
       />
@@ -183,7 +193,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
                 />
             )) : (
                 <div className={styles.emptyState}>
-                    No devices detected.
+                    {t('messages.noDevices')}
                 </div>
             )}
         </div>

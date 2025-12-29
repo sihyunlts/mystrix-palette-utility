@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
 import { MIDIConnection } from './components/MIDIConnection';
@@ -18,12 +19,6 @@ import styles from './App.module.css';
 // Dynamic Preset Loader
 // Scan src/presets for any files and treat them as palette data
 const presetsContext = (require as any).context('./presets', false, /.*/);
-const PRESET_DESCRIPTIONS: Record<string, string> = {
-  'novation_rg': 'The Red and Green only palette used by early Novation Launchpads.',
-  'novation_rgb': 'The modern full RGB palette applied by default to all RGB Launchpads after the Launchpad MK2.',
-  'mat1jaczyyy': 'A custom-tuned RGB palette by mat1jaczyyy.',
-  'sihyunlights': 'A palette nearly identical to the Novation RGB palette, but with the 71st color adjusted to be darker.'
-};
 
 const INITIAL_PRESETS = presetsContext.keys()
   .filter((key: string) => !key.endsWith('.ts') && !key.endsWith('.js'))
@@ -32,8 +27,8 @@ const INITIAL_PRESETS = presetsContext.keys()
     const name = key.replace('./', '').replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
     return {
       id: key,
+      cleanId: id,
       name: name,
-      description: PRESET_DESCRIPTIONS[id] || 'A custom palette preset for Mystrix.',
       url: presetsContext(key)
     };
   });
@@ -208,6 +203,7 @@ const useWindowWidth = () => {
 };
 
 const AppContent: React.FC = () => {
+    const { t, i18n } = useTranslation();
     const width = useWindowWidth();
     const isMobile = width <= 900;
     const isSmallMobile = width <= 600;
@@ -437,7 +433,7 @@ const AppContent: React.FC = () => {
       playLightshow('/done.mid', midiOutput || undefined); 
     } catch (error) {
       showModal({
-        title: 'Upload Failed',
+        title: t('messages.uploadFailed'),
         message: String(error),
         type: 'alert',
         isDanger: true
@@ -451,10 +447,10 @@ const AppContent: React.FC = () => {
     if (!matrixOS) return;
 
     const confirmed = await showModal({
-      title: 'This feature won\'t work.',
-      message: `The official MatrixOS does not support this feature. Furthermore, since you can simply overwrite the palette, most users don't even need this functionality. However, I added it because I found unused palettes cluttering the display unsightly...`,
+      title: t('messages.featureNotSupported'),
+      message: t('messages.featureNotSupportedDesc'),
       type: 'confirm',
-      confirmLabel: 'Uhh okay',
+      confirmLabel: t('buttons.uhhOkay'),
       isDanger: true
     });
 
@@ -466,7 +462,7 @@ const AppContent: React.FC = () => {
       playLightshow('/del_done.mid', midiOutput || undefined);
     } catch (error) {
       showModal({
-        title: 'Deletion Failed',
+        title: t('messages.deleteFailed'),
         message: String(error),
         type: 'alert',
         isDanger: true
@@ -489,7 +485,7 @@ const AppContent: React.FC = () => {
       setGlobalContrast(0);
     } catch (error) {
       showModal({
-        title: 'Load Failed',
+        title: t('messages.loadFailed'),
         message: 'Failed to load palette: ' + error,
         type: 'alert',
         isDanger: true
@@ -517,7 +513,7 @@ const AppContent: React.FC = () => {
         setSelectedColorIndex(undefined);
     } catch (error) {
         showModal({
-            title: 'Preset Load Failed',
+            title: t('messages.presetLoadFailed'),
             message: 'Failed to fetch preset data: ' + error,
             type: 'alert',
             isDanger: true
@@ -526,37 +522,55 @@ const AppContent: React.FC = () => {
   };
 
   const slotOptions = [
-    { label: 'Slot 1', value: 1 },
-    { label: 'Slot 2', value: 2 },
-    { label: 'Slot 3', value: 3 },
-    { label: 'Slot 4', value: 4 },
+    { label: `${t('labels.slot')} 1`, value: 1 },
+    { label: `${t('labels.slot')} 2`, value: 2 },
+    { label: `${t('labels.slot')} 3`, value: 3 },
+    { label: `${t('labels.slot')} 4`, value: 4 },
   ];
 
   return (
     <div className={styles.root}>
         <header className={styles.header}>
           <div className={styles.logoContainer}>
-            <img src="/favicon.ico" alt="Mystrix Logo" className={styles.logo} />
+            <img src="/favicon.ico" alt="Mystrix Palette Utility" className={styles.logo} />
             <h1 className={styles.title}>
-              Mystrix Palette Utility
+              {t('title')}
             </h1>
           </div>
           
-          <DropdownButton
-            label="Links"
-            variant="ghost"
-            options={[
-              { label: 'Mystrix', type: 'header' },
-              { label: 'MatrixOS wiki', url: 'https://matrix.203.io' },
-              { label: 'MatrixOS Control Map Editor', url: 'https://edit.203.io/' },
-              { label: 'MatrixOS Simulator', url: 'https://demo.203.io' },
-              { type: 'divider' },
-              { label: 'sihyunlights', type: 'header' },
-              { label: 'sihyunlights.com', url: 'https://sihyunlights.com' }
-            ]}
-            dropdownPosition="bottom"
-            align="right"
-          />
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <DropdownButton
+              label={t('dropdown.language')}
+              variant="ghost"
+              options={[
+                { label: 'English', value: 0, type: 'item' },
+                { label: '한국어', value: 1, type: 'item' },
+                { label: '中文', value: 2, type: 'item' }
+              ]}
+              onSelect={(val) => {
+                if (val === 0) i18n.changeLanguage('en');
+                if (val === 1) i18n.changeLanguage('ko');
+                if (val === 2) i18n.changeLanguage('zh');
+              }}
+              dropdownPosition="bottom"
+              align="right"
+            />
+            <DropdownButton
+              label={t('dropdown.links')}
+              variant="ghost"
+              options={[
+                { label: t('links.matrixOS'), type: 'header' },
+                { label: t('links.wiki'), url: 'https://matrix.203.io' },
+                { label: t('links.editor'), url: 'https://edit.203.io/' },
+                { label: t('links.simulator'), url: 'https://demo.203.io' },
+                { type: 'divider' },
+                { label: 'sihyunlights', type: 'header' },
+                { label: 'sihyunlights.com', url: 'https://sihyunlights.com' }
+              ]}
+              dropdownPosition="bottom"
+              align="right"
+            />
+          </div>
         </header>
       <div className={styles.container}>
         <main className={`${styles.main} ${isMobile ? styles.mobile : ''}`}>
@@ -571,9 +585,9 @@ const AppContent: React.FC = () => {
                 />
             </div>
             <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
-                  <SectionHeader title="Lightshow Preview" />
+                  <SectionHeader title={t('sections.preview')} />
                   <div className={`${styles.previewDescription} font-size-sm`}>
-                    Upload a MIDI file to preview the lightshow effect on the grid.
+                    {t('messages.previewDesc')}
                   </div>
 
                   <div className={styles.previewControls}>
@@ -582,7 +596,7 @@ const AppContent: React.FC = () => {
                         onClick={() => previewInputRef.current?.click()}
                         className={styles.previewButton}
                     >
-                      {previewFile ? previewFile.name : 'Select MIDI File'}
+                      {previewFile ? previewFile.name : t('buttons.selectFile')}
                     </Button>
                     
                     <Button 
@@ -635,16 +649,16 @@ const AppContent: React.FC = () => {
               <div className={`${styles.actionBar} ${isSmallMobile ? styles.mobile : ''}`}>
                 <div className={styles.actionGroup}>
                   <DropdownButton 
-                      label="Upload" 
+                      label={t('buttons.upload')} 
                       options={slotOptions} 
                       onSelect={handleUpload}
                       disabled={isUploading || !midiOutput}
                       loading={isUploading}
-                      loadingLabel="Uploading..."
+                      loadingLabel={t('messages.uploading')}
                   />
                   
                   <DropdownButton 
-                      label="Delete" 
+                      label={t('buttons.delete')} 
                       options={slotOptions} 
                       onSelect={handleDelete}
                       disabled={isUploading || !midiOutput}
@@ -657,14 +671,14 @@ const AppContent: React.FC = () => {
                       variant="secondary"
                       onClick={handleLoadFile}
                   >
-                      Import
+                      {t('buttons.import')}
                   </Button>
 
                   <Button
                       variant="secondary"
                       onClick={handleSaveFile}
                   >
-                      Export
+                      {t('buttons.export')}
                   </Button>
                 </div>
               </div>
@@ -675,7 +689,7 @@ const AppContent: React.FC = () => {
           {/* Right Column: Presets */}
           <aside className={`${styles.rightColumn}`}>
             <div className={`sidebar ${styles.presetSection} ${isMobile ? styles.mobile : ''}`}>
-              <SectionHeader title="Palette Presets" />
+              <SectionHeader title={t('sections.presets')} />
               <div className={styles.presetList}>
                 {INITIAL_PRESETS.map((preset: any) => (
                   <div key={preset.id} className={styles.presetItem}>
@@ -690,12 +704,12 @@ const AppContent: React.FC = () => {
                     <Button
                       variant="badge"
                       icon="circle-info"
-                      title="Info"
+                      title={t('buttons.info')}
                       onClick={(e) => {
                         e.stopPropagation();
                         showModal({
                           title: preset.name,
-                          message: preset.description,
+                          message: t(`presets.descriptions.${preset.cleanId}`),
                           type: 'alert'
                         });
                       }}
@@ -707,8 +721,8 @@ const AppContent: React.FC = () => {
           </aside>
         </main>
         <footer className={styles.footer}>
-          <div className="font-size-md color-dim">for matrixos, by sihyunlights.</div>
-          <div className="font-size-md color-muted font-weight-normal">website under construction.</div>
+          <div className="font-size-md color-dim">{t('footer.by')}</div>
+          <div className="font-size-md color-muted font-weight-normal">{t('footer.status')}</div>
         </footer>
       </div>
       <input

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Slider } from './Slider';
 import styles from './GlobalAdjustmentBox.module.css';
 
@@ -15,6 +16,8 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
   onSaturationChange, 
   onContrastChange 
 }) => {
+  const { t } = useTranslation();
+
   const handleReset = () => {
     onSaturationChange(0);
     onContrastChange(0);
@@ -25,20 +28,20 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.labelSection}>
-        <span className="font-size-xs">Global</span>
+        <span className="font-size-xs">{t('labels.global')}</span>
         {hasChanges && (
           <div 
             onClick={handleReset}
             className={styles.resetButton}
           >
-            Reset
+           {t('buttons.reset')}
           </div>
         )}
       </div>
 
       <div className={styles.controls}>
         <Slider
-          label="Saturation"
+          label={t('labels.saturation')}
           value={saturation}
           min={-100}
           max={100}
@@ -46,7 +49,7 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
           valueDisplay={`${saturation > 0 ? '+' : ''}${saturation}%`}
         />
         <Slider
-          label="Contrast"
+          label={t('labels.contrast')}
           value={contrast}
           min={-15}
           max={15}

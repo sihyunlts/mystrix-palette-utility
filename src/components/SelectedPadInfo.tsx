@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Color } from '../types';
 import { ColorPicker } from './ColorPicker';
 import styles from './SelectedPadInfo.module.css';
@@ -14,10 +15,12 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
   color, 
   onColorChange 
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className={styles.container}>
       <div className={styles.group}>
-        <span className={styles.label}>Selected Pad</span>
+        <span className={styles.label}>{t('labels.selectedPad')}</span>
         <div className={styles.divider} />
         
         <span className={styles.indexValue}>
@@ -36,7 +39,7 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
           />
         </div>
         <div className={styles.rgbGroup}>
-          <span className={styles.label}>RGB Value</span>
+          <span className={styles.label}>{t('labels.rgbValue')}</span>
           <code className={styles.rgbValue}>
             {selectedIndex !== undefined 
               ? `${color.r}, ${color.g}, ${color.b}`
