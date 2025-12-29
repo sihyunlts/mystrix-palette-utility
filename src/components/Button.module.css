@@ -3,69 +3,70 @@
 .button {
   padding: 8px 12px;
   border-radius: var(--radius-subtle);
-  font-weight: var(--button-font-weight);
-  font-size: var(--button-font-size);
-  line-height: var(--button-line-height);
   cursor: pointer;
   transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: none; /* Reset default button border */
 }
 
-.button:disabled,
-.button.loading {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* Variants */
+/* ... existing variants ... */
 .primary {
   background-color: var(--color-primary);
-  color: var(--color-text-main);
-  border: none;
 }
 
 .secondary {
-  background-color: var(--color-secondary);
-  color: var(--color-text-main);
-  border: none;
-}
-
-.secondary.active {
-  background-color: var(--color-primary);
+  background-color: var(--color-bg-subtle);
 }
 
 .danger {
   background-color: var(--color-danger);
-  color: var(--color-text-main);
-  border: none;
 }
 
 .ghost {
   background-color: transparent;
-  color: var(--color-text-dim);
   border: 1px solid var(--color-border);
 }
 
 .ghost.active {
   background-color: rgba(65, 113, 255, 0.1);
-  color: var(--color-primary);
   border-color: var(--color-primary);
 }
 
 .icon {
   background-color: transparent;
-  color: inherit;
-  border: none;
-  padding: 8px;
+  padding: 4px;
   min-width: auto;
-  font-weight: inherit;
-  font-size: inherit;
-  line-height: inherit;
+  border: none;
 }
 
-.icon.active {
+.icon:hover {
   color: var(--color-primary);
+}
+
+.badge {
+  position: absolute;
+  right: 12px;
+  background-color: transparent;
+  padding: 4px;
+  min-width: auto;
+  border: none;
+  z-index: 2;
+}
+
+.badge:hover {
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.hasIcon {
+  justify-content: space-between;
+  min-width: 96px;
+}
+
+.small {
+  padding: 4px 8px;
+  gap: var(--spacing-xs);
 }

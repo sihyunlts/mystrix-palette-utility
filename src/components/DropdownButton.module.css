@@ -5,22 +5,11 @@
   display: inline-block;
 }
 
-.button {
-  min-width: 140px;
-  justify-content: space-between;
-  position: relative;
-}
-
 .button.open {
   z-index: var(--z-dropdown-button);
 }
 
-.icon {
-  font-size: var(--button-icon-size);
-  transition: var(--button-icon-transition);
-}
-
-.icon.open {
+.button.open i {
   transform: rotate(180deg);
 }
 
@@ -28,7 +17,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-backdrop);
- cursor: default;
+  cursor: default;
 }
 
 .menu {
@@ -41,7 +30,8 @@
   box-shadow: var(--shadow-main);
   display: flex;
   flex-direction: column;
-  min-width: 180px;
+  min-width: 128px;
+  width: max-content;
 }
 
 .menu.top {
@@ -67,14 +57,12 @@
   padding: var(--spacing-md) var(--spacing-lg);
   background-color: transparent;
   border: none;
-  color: var(--color-text-main);
   cursor: pointer;
-  font-size: var(--button-font-size);
-  font-weight: var(--button-font-weight);
-  line-height: var(--button-line-height);
   transition: background-color 0.2s;
   display: block;
   width: 100%;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .menuItem:not(:last-child) {
@@ -83,4 +71,14 @@
 
 .menuItem:hover {
   background-color: var(--color-bg-subtle);
+}
+
+.divider {
+  height: 6px;
+  background-color: var(--color-border);
+}
+
+.sectionHeader {
+  padding: 12px 12px 4px 12px;
+  white-space: nowrap;
 }

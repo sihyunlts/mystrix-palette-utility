@@ -6,85 +6,54 @@
   gap: 12px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.headerTitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-text-main);
-}
-
-.deviceButton {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 12px;
-  background-color: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-subtle);
-  cursor: pointer;
-  color: var(--color-text-main);
-  transition: all 0.2s;
-  gap: 4px;
-  width: 100%;
-}
-
-.deviceButton:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.deviceButton.selected {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
+/* Base style for device items (shared between button and connected display) */
+.deviceButton,
 .connectedDevice {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   padding: 12px;
-  background-color: var(--color-bg-subtle);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-subtle);
-  color: var(--color-text-main);
-  gap: 4px;
+  gap: var(--spacing-xs);
   width: 100%;
+  background-color: transparent;
 }
 
-.deviceName {
-  color: var(--color-accent);
+.deviceButton {
+  cursor: pointer;
+}
+
+.deviceButton :global(.text-main) {
+  color: var(--color-text-main);
+}
+
+.connectedDevice {
+  border-color: var(--color-accent);
 }
 
 .deviceList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
+  gap: var(--spacing-sm);
 }
 
 .errorBox {
   padding: 16px;
-  background-color: rgba(244, 67, 54, 0.1);
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-subtle);
   color: var(--color-danger);
-  font-size: 13px;
   text-align: center;
 }
 
 .loadingBox {
   text-align: center;
   color: var(--color-text-dim);
+  padding: 20px;
 }
 
 .emptyState {
   text-align: center;
   padding: 20px;
   color: var(--color-text-dim);
-  font-size: 13px;
 }

@@ -1,64 +1,66 @@
 :root {
   /* Core Colors */
-  --color-primary: #4171ff;
+  --color-primary: #4977ff;
   --color-danger: #ff4a40;
-  --color-secondary: #333;
   --color-accent: #00ffaa;
   
   /* Backgrounds & Surfaces */
-  --color-bg-main: #101010;
-  --color-bg-surface: #1b1b1b;
-  --color-bg-surface-alt: #181818;
-  --color-bg-subtle: rgba(255, 255, 255, 0.05);
+  --color-bg-main: rgb(16, 16, 18);
+  --color-bg-surface: rgb(27, 27, 34);
+  --color-bg-subtle: rgb(44, 44, 56);
+
+  /* Mystrix */
+  --color-mystrix-surface: #181818;
+  --shadow-mystrix: 0 4px 24px rgba(0, 0, 0, 0.4);
   
   /* Text */
   --color-text-main: #ffffff;
-  --color-text-dim: #888;
-  --color-text-muted: #5c5c5c;
-  --color-text-important: #ddd;
+  --color-text-dim: rgb(160, 160, 176);
+  --color-text-muted: rgb(100, 100, 110);
   
   /* Borders & Shadows */
-  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border: rgb(50, 50, 60);
   --shadow-main: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-intense: 0 8px 32px rgba(0, 0, 0, 0.8);
-  --shadow-pad: 0 4px 24px rgba(0, 0, 0, 0.4);
   
-  /* Layout */
+  /* Radius */
   --radius-main: 8px;
   --radius-subtle: 4px;
-  
-  /* Button Text Styles */
-  --button-font-size: 14px;
-  --button-font-weight: 600;
-  --button-line-height: 1.4;
-  
-  /* Button Icon Styles */
-  --button-icon-size: 10px;
-  --button-icon-transition: transform 0.2s;
-  
-  /* Typography */
-  --label-font-size: 12px;
-  --label-small-font-size: 11px;
-  --label-letter-spacing: 0.5px;
-  --label-font-weight: 500;
-  
+
   /* Spacing */
-  --spacing-xs: 4px;
+  --spacing-xs: 6px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
   --spacing-xl: 20px;
   --spacing-2xl: 24px;
   
+  /* Typography Tokens */
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
   /* Z-index */
   --z-backdrop: 90;
   --z-dropdown: 100;
   --z-dropdown-button: 101;
 }
 
+/* Token End */
+
+
+
 /* Global Reset */
 * {
   box-sizing: border-box;
+  color: var(--color-text-main);
+  font-weight: var(--font-weight-normal);
 }
 
 body {
@@ -67,34 +69,70 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg-main);
-  color: var(--color-text-main);
 }
 
-button, input, textarea, select {
+button, input, textarea, select, i {
   font-family: inherit;
+  color: inherit;
 }
 
-/* Utility Classes */
-.text-label {
-  font-size: var(--label-font-size);
-  color: var(--color-text-dim);
-  font-weight: var(--label-font-weight);
-  line-height: 1.33;
+span {
+  text-align: start;
 }
 
-.text-label-small {
-  font-size: var(--label-small-font-size);
-  color: var(--color-text-dim);
-  font-weight: var(--label-font-weight);
-  letter-spacing: var(--label-letter-spacing);
-  text-transform: uppercase;
+/* --- Typography System --- */
+
+/* Base Headings */
+h1 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.01em;}
+h2 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.01em;}
+h3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.00em;}
+
+/* 1. Size Utilities (Includes Defaults) */
+.font-size-sm { 
+  font-size: var(--font-size-sm); 
+  color: var(--color-text-dim);  
+  font-weight: var(--font-weight-normal); 
+  line-height: 1.4;
+}
+.font-size-md { 
+  font-size: var(--font-size-base); 
+  color: var(--color-text-dim); 
+  font-weight: var(--font-weight-medium); 
+  line-height: 1.45;
+}
+.font-size-lg { 
+  font-size: var(--font-size-lg); 
+  color: var(--color-text-main); 
+  font-weight: var(--font-weight-semibold); 
+  line-height: 1.5;
+}
+.font-size-xl { 
+  font-size: var(--font-size-xl); 
+  color: var(--color-text-main); 
+  font-weight: var(--font-weight-semibold); 
+  line-height: 1.5;
 }
 
+/* 2. Weight Modifiers */
+.font-weight-normal   { font-weight: var(--font-weight-normal); }
+.font-weight-medium   { font-weight: var(--font-weight-medium); }
+.font-weight-bold     { font-weight: var(--font-weight-semibold); }
+
+/* 3. Color Modifiers */
+.color-main     { color: var(--color-text-main); }
+.color-dim      { color: var(--color-text-dim); }
+.color-muted    { color: var(--color-text-muted); }
+.color-primary  { color: var(--color-primary); }
+.color-accent   { color: var(--color-accent); }
+.color-danger   { color: var(--color-danger); }
+
+/* --- Special Styles --- */
 .text-code {
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
+/* --- Layout --- */
 .sidebar {
   display: flex;
   flex-direction: column;

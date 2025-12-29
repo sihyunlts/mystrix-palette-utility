@@ -7,23 +7,18 @@
 }
 
 .header {
-  margin-bottom: 24px;
-  height: 56px;
+  margin: 0 auto 8px auto;
+  max-width: 1600px;
+  height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
 }
 
 .title {
   margin: 0;
-  font-size: 20px;
   font-weight: 600;
   color: var(--color-text-main);
-}
-
-.titleAccent {
-  color: var(--color-accent);
 }
 
 .container {
@@ -144,7 +139,7 @@
 .presetList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .presetItem {
@@ -160,31 +155,14 @@
   justify-content: flex-start;
 }
 
-.infoBadge {
-  position: absolute;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background-color: transparent;
-  color: var(--color-text-dim);
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 0;
-  z-index: 2;
-}
-
-.infoBadge:hover {
-  border-color: var(--color-primary);
-  background-color: rgba(65, 113, 255, 0.05);
-  color: var(--color-primary);
-}
-
 .hiddenInput {
   display: none;
+}
+.footer {
+  grid-column: 2;
+  padding: 40px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }

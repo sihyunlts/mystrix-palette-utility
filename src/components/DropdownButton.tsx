@@ -3,8 +3,10 @@ import { Button } from './Button';
 import styles from './DropdownButton.module.css';
 
 type DropdownOption = 
-  | { label: string; value: number; url?: never }
-  | { label: string; url: string; value?: never };
+  | { label: string; value: number; url?: never; type?: 'item' }
+  | { label: string; url: string; value?: never; type?: 'item' }
+  | { label: string; type: 'header'; value?: never; url?: never }
+  | { type: 'divider'; label?: never; value?: never; url?: never };
 
 interface DropdownButtonProps {
   label: string;
@@ -55,7 +57,6 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   };
 
   const buttonClass = `${styles.button} ${isOpen ? styles.open : ''}`;
-  const iconClass = `${styles.icon} ${isOpen ? styles.open : ''}`;
   const menuClass = `${styles.menu} ${styles[dropdownPosition]} ${styles[`align${align.charAt(0).toUpperCase() + align.slice(1)}`]}`;
 
   const buttonStyle = color ? { backgroundColor: color } : {};
@@ -69,13 +70,10 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
         variant={variant}
         className={buttonClass}
         style={buttonStyle}
+        icon={!loading ? 'chevron-down' : undefined}
+        iconPosition="right"
       >
         {loading ? loadingLabel : label}
-        {!loading && (
-          <span className={iconClass}>
-            ▼
-          </span>
-        )}
       </Button>
 
       {/* Backdrop */}
@@ -89,6 +87,18 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
       {isOpen && (
         <div className={menuClass}>
           {options.map((option, index) => {
+            if (option.type === 'divider') {
+              return <div key={index} className={styles.divider} />;
+            }
+
+            if (option.type === 'header') {
+              return (
+                <div key={index} className={`${styles.sectionHeader} font-size-sm color-dim`}>
+                  {option.label}
+                </div>
+              );
+            }
+
             const isLink = 'url' in option && option.url !== undefined;
 
             if (isLink) {
@@ -99,7 +109,7 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setIsOpen(false)}
-                  className={styles.menuItem}
+                  className={`${styles.menuItem} font-size-md color-main`}
                 >
                   {option.label}
                 </a>
@@ -110,7 +120,7 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
               <button
                 key={option.value}
                 onClick={() => handleOptionClick(option)}
-                className={styles.menuItem}
+                className={`${styles.menuItem} font-size-md color-main`}
               >
                 {option.label}
               </button>

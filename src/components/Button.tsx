@@ -2,37 +2,68 @@ import React from 'react';
 import styles from './Button.module.css';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon' | 'badge';
+  size?: 'default' | 'small';
   isLoading?: boolean;
   active?: boolean;
+  icon?: string;
+  iconPosition?: 'left' | 'right';
 }
 
 export const Button: React.FC<ButtonProps> = ({ 
   children, 
-  variant = 'primary', 
+  variant = 'primary',
+  size = 'default',
   isLoading = false,
   active = false,
+  icon,
+  iconPosition = 'left',
   className = '',
   style,
   disabled,
   ...props 
 }) => {
+  const getColorClass = () => {
+    if (variant === 'ghost' || variant === 'icon' || variant === 'badge') {
+      return active ? 'color-primary' : 'color-dim';
+    }
+    return 'color-main';
+  };
+
   const classNames = [
     styles.button,
+    size === 'small' ? 'font-size-sm' : 'font-size-md',
+    size === 'small' ? styles.small : '',
+    getColorClass(),
     styles[variant],
     active ? styles.active : '',
     isLoading ? styles.loading : '',
     className
   ].filter(Boolean).join(' ');
 
+  // 아이콘과 텍스트가 함께 있는지 확인
+  const hasIcon = icon && children;
+
+  const renderIcon = () => (
+    icon && <i className={`fa-solid fa-${icon} ${size === 'small' ? 'fa-sm' : ''}`}></i>
+  );
+
   return (
     <button 
       disabled={disabled || isLoading}
-      className={classNames}
+      className={`${classNames} ${hasIcon && size !== 'small' ? styles.hasIcon : ''}`}
       style={style}
       {...props}
     >
-      {isLoading ? 'Loading...' : children}
+      {isLoading ? (
+        'Loading...'
+      ) : (
+        <>
+          {iconPosition === 'left' && renderIcon()}
+          {children}
+          {iconPosition === 'right' && renderIcon()}
+        </>
+      )}
     </button>
   );
 };

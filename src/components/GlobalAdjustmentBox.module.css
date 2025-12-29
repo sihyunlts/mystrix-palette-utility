@@ -17,7 +17,7 @@
 .resetButton {
   cursor: pointer;
   color: var(--color-danger);
-  font-size: var(--label-small-font-size);
+  font-size: var(--font-size-xs);
   text-decoration: underline;
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }

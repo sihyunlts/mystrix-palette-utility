@@ -8,6 +8,7 @@ import { Button } from './components/Button';
 import { ModalProvider, useModal } from './components/Modal';
 import { SelectedPadInfo } from './components/SelectedPadInfo';
 import { GlobalAdjustmentBox } from './components/GlobalAdjustmentBox';
+import { SectionHeader } from './components/SectionHeader';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
 import { LightshowPlayer, HardwareLightshowEvent, UILightshowEvent } from './utils/LightshowPlayer';
 import { applyGlobalSettings } from './utils/colorUtils';
@@ -196,26 +197,6 @@ const preloadSystemMIDI = async () => {
 };
 preloadSystemMIDI();
 
-const InfoBadge: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onClick }) => {
-  const [isHovered, setIsHovered] = React.useState(false);
-  
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={styles.infoBadge}
-      style={{
-        borderColor: isHovered ? 'var(--color-primary)' : 'var(--color-border)',
-        backgroundColor: isHovered ? 'rgba(65, 113, 255, 0.05)' : 'transparent',
-        color: isHovered ? 'var(--color-primary)' : 'var(--color-text-dim)'
-      }}
-    >
-      i
-    </button>
-  );
-};
-
 const useWindowWidth = () => {
   const [width, setWidth] = React.useState(window.innerWidth);
   React.useEffect(() => {
@@ -233,6 +214,11 @@ const AppContent: React.FC = () => {
 
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
+  const midiOutputRef = useRef<MIDIOutput | null>(null);
+  useEffect(() => {
+    midiOutputRef.current = midiOutput;
+  }, [midiOutput]);
+
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<MIDIOutput | null>(null);
   
@@ -289,7 +275,7 @@ const AppContent: React.FC = () => {
     setLightshowColors(new Map());
     setIsLightshowActive(true);
 
-    const targetOutput = device || midiOutput;
+    const targetOutput = device || midiOutputRef.current;
     
     try {
       let midiObj: any;
@@ -391,7 +377,7 @@ const AppContent: React.FC = () => {
         setIsLightshowActive(false);
       }
     }
-  }, [midiOutput, mapMIDINoteToPadIndex]);
+  }, [mapMIDINoteToPadIndex]); // midiOutput removed from dependencies
 
 
 
@@ -402,7 +388,7 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  const handleDeviceConnected = async (device: MIDIOutput) => {
+  const handleDeviceConnected = useCallback(async (device: MIDIOutput) => {
     const epoch = ++connectionEpochRef.current;
     
     // Stabilization delay (allows OS/Browser MIDI enumeration to settle)
@@ -415,15 +401,15 @@ const AppContent: React.FC = () => {
     setMatrixOS(new MatrixOSMIDI(device));
     setSelectedDevice(device); // Sync the selection state
     playLightshow('/connected.mid', device);
-  };
+  }, [playLightshow]);
 
-  const handleDeviceDisconnected = () => {
+  const handleDeviceDisconnected = useCallback(() => {
     setMidiOutput(null);
     setMatrixOS(null);
     setSelectedDevice(null);
-  };
+  }, []);
 
-  const handleDeviceSelect = (device: MIDIOutput | null) => {
+  const handleDeviceSelect = useCallback((device: MIDIOutput | null) => {
     setSelectedDevice(device);
     if (device) {
       setMidiOutput(device);
@@ -432,7 +418,7 @@ const AppContent: React.FC = () => {
       setMidiOutput(null);
       setMatrixOS(null);
     }
-  };
+  }, []);
 
   const handleColorChange = useCallback((index: number, color: Color) => {
     setPalette(prev => ({
@@ -557,13 +543,21 @@ const AppContent: React.FC = () => {
     <div className={styles.root}>
         <header className={styles.header}>
           <h1 className={styles.title}>
-            Mystrix <span className={styles.titleAccent}>Palette</span> Editor
+            Mystrix Palette Utility
           </h1>
           
           <DropdownButton
             label="Links"
-            options={urlOptions}
             variant="ghost"
+            options={[
+              { label: 'Mystrix', type: 'header' },
+              { label: 'MatrixOS wiki', url: 'https://matrix.203.io' },
+              { label: 'MatrixOS Control Map Editor', url: 'https://edit.203.io/' },
+              { label: 'MatrixOS Simulator', url: 'https://demo.203.io' },
+              { type: 'divider' },
+              { label: 'sihyunlights', type: 'header' },
+              { label: 'sihyunlights.com', url: 'https://sihyunlights.com' }
+            ]}
             dropdownPosition="bottom"
             align="right"
           />
@@ -581,7 +575,8 @@ const AppContent: React.FC = () => {
                 />
             </div>
             <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
-                  <div className={styles.previewDescription}>
+                  <SectionHeader title="Lightshow Preview" />
+                  <div className={`${styles.previewDescription} font-size-sm`}>
                     Upload a MIDI file to preview the lightshow effect on the grid.
                   </div>
 
@@ -684,9 +679,7 @@ const AppContent: React.FC = () => {
           {/* Right Column: Presets */}
           <aside className={`${styles.rightColumn}`}>
             <div className={`sidebar ${styles.presetSection} ${isMobile ? styles.mobile : ''}`}>
-              <div className="text-label-small" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                Palette Presets
-              </div>
+              <SectionHeader title="Palette Presets" />
               <div className={styles.presetList}>
                 {INITIAL_PRESETS.map((preset: any) => (
                   <div key={preset.id} className={styles.presetItem}>
@@ -698,7 +691,10 @@ const AppContent: React.FC = () => {
                     >
                       {preset.name}
                     </Button>
-                    <InfoBadge
+                    <Button
+                      variant="badge"
+                      icon="circle-info"
+                      title="Info"
                       onClick={(e) => {
                         e.stopPropagation();
                         showModal({
@@ -714,6 +710,10 @@ const AppContent: React.FC = () => {
             </div>
           </aside>
         </main>
+        <footer className={styles.footer}>
+          <div className="font-size-md color-dim">for matrixos, by sihyunlights.</div>
+          <div className="font-size-md color-muted font-weight-normal">website under construction.</div>
+        </footer>
       </div>
       <input
         ref={previewInputRef}

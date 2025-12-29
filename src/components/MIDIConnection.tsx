@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MIDIManager } from '../utils/midi';
-import { Button } from './Button';
+import { SectionHeader } from './SectionHeader';
 import styles from './MIDIConnection.module.css';
 
 interface MIDIConnectionProps {
@@ -12,47 +12,26 @@ interface MIDIConnectionProps {
 
 const DeviceButton: React.FC<{
     device: MIDIOutput, 
-    isSelected: boolean, 
     index: number,
+    isConnected?: boolean,
     onClick: () => void 
-}> = ({ device, isSelected, index, onClick }) => {
-    const [isHovered, setIsHovered] = useState(false);
+}> = ({ device, index, isConnected = false, onClick }) => {
+    const className = isConnected ? styles.connectedDevice : styles.deviceButton;
     
-    const buttonClass = `${styles.deviceButton} ${isSelected ? styles.selected : ''}`;
-    const buttonStyle = {
-        backgroundColor: isSelected ? 'var(--color-primary)' : (isHovered ? 'rgba(255, 255, 255, 0.1)' : undefined),
-        borderColor: isSelected ? 'var(--color-primary)' : undefined
-    };
-
     return (
         <button
             onClick={onClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className={buttonClass}
-            style={buttonStyle}
+            className={className}
         >
-            <span>{device.name}</span>
-            <span className="text-label">{device.manufacturer} - Port {index + 1}</span>
+            <span className={`font-size-md color-main ${isConnected ? 'color-accent font-weight-bold' : ''}`}>
+                {device.name}
+            </span>
+            <span className="font-size-sm">
+                {device.manufacturer}
+            </span>
         </button>
     );
 };
-
-const SectionHeader: React.FC<{
-    buttonText: string;
-    onButtonClick: () => void;
-}> = ({ buttonText, onButtonClick }) => {
-    return (
-        <div className={styles.header}>
-            <h3 className={styles.headerTitle}>Select Device</h3>
-            <Button onClick={onButtonClick} variant="ghost" style={{ padding: '4px 8px', fontSize: '12px' }}>
-                ↻ {buttonText}
-            </Button>
-        </div>
-    );
-};
-
-
 
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   onDeviceConnected,
@@ -61,7 +40,6 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   onDeviceSelect
 }) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [deviceName, setDeviceName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [availableDevices, setAvailableDevices] = useState<MIDIOutput[]>([]);
@@ -73,6 +51,43 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   useEffect(() => {
     selectedDeviceRef.current = selectedDevice;
   }, [selectedDevice]);
+
+  const handleDeviceSelect = React.useCallback((device: MIDIOutput | null) => {
+    onDeviceSelect(device);
+    if (device) {
+      setIsConnected(true);
+      onDeviceConnected(device);
+    } else {
+      setIsConnected(false);
+      onDeviceDisconnected();
+    }
+  }, [onDeviceSelect, onDeviceConnected, onDeviceDisconnected]);
+
+  const initializeMIDI = React.useCallback(async (autoConnect: boolean = false) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await midiManager.initialize();
+      
+      const devices = midiManager.getDevices();
+      setAvailableDevices(devices);
+      
+      if (devices.length === 0) {
+        setError('No MIDI devices found.');
+      } else if (autoConnect) {
+        const targetDevice = devices.find(d => 
+          d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
+        );
+        if (targetDevice) {
+           handleDeviceSelect(targetDevice);
+        }
+      }
+    } catch (err) {
+      setError('Web MIDI API not supported or access denied.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleDeviceSelect, midiManager]);
 
   useEffect(() => {
     // Initial load
@@ -102,55 +117,15 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     });
 
     return () => removeListener();
-  }, []); // Run once on mount
+  }, [initializeMIDI, handleDeviceSelect, midiManager]); // Updated dependencies
 
-  const initializeMIDI = async (autoConnect: boolean = false) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await midiManager.initialize();
-      
-      const devices = midiManager.getDevices();
-      setAvailableDevices(devices);
-      
-      if (devices.length === 0) {
-        setError('No MIDI devices found.');
-      } else if (autoConnect) {
-        const targetDevice = devices.find(d => 
-          d.name && (d.name.toLowerCase().includes('mystrix') || d.name.toLowerCase().includes('matrix'))
-        );
-        if (targetDevice) {
-           handleDeviceSelect(targetDevice);
-        }
-      }
-    } catch (err) {
-      setError('Web MIDI API not supported or access denied.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeviceSelect = (device: MIDIOutput | null) => {
-    onDeviceSelect(device);
-    if (device) {
-      setDeviceName(device.name ?? 'Unknown Device');
-      setIsConnected(true);
-      onDeviceConnected(device);
-    } else {
-      setDeviceName('');
-      setIsConnected(false);
-      onDeviceDisconnected();
-    }
-  };
-
-  const handleRefresh = () => {
+  const handleRefresh = React.useCallback(() => {
     setIsConnected(false);
-    setDeviceName('');
     setError(null);
     setAvailableDevices([]);
     onDeviceSelect(null);
     initializeMIDI(false);
-  };
+  }, [onDeviceSelect, initializeMIDI]);
 
   if (isLoading) {
     return (
@@ -162,27 +137,40 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
   if (isConnected) {
     const deviceIndex = availableDevices.findIndex(d => (d as any).id === (selectedDevice as any)?.id);
-    const portNumber = deviceIndex !== -1 ? deviceIndex + 1 : '?';
     
     return (
       <div className={styles.container}>
-        <SectionHeader buttonText="Disconnect" onButtonClick={handleRefresh} />
+        <SectionHeader 
+          title="Select Device" 
+          buttonText="Disconnect" 
+          onButtonClick={handleRefresh} 
+          icon="link-slash"
+        />
         
-        <div className={styles.connectedDevice}>
-          <span className={styles.deviceName}>{deviceName}</span>
-          <span className="text-label">{selectedDevice?.manufacturer} - Port {portNumber}</span>
-        </div>
+        {selectedDevice && (
+          <DeviceButton
+            device={selectedDevice}
+            index={deviceIndex !== -1 ? deviceIndex : 0}
+            isConnected={true}
+            onClick={handleRefresh}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className={styles.container}>
-      <SectionHeader buttonText="Refresh" onButtonClick={handleRefresh} />
+      <SectionHeader 
+        title="Select Device" 
+        buttonText="Refresh" 
+        onButtonClick={handleRefresh} 
+        icon="rotate"
+      />
 
       {error ? (
         <div className={styles.errorBox}>
-          {error}
+          <span className='font-size-md color-danger'>{error}</span>
         </div>
       ) : (
         <div className={styles.deviceList}>
@@ -191,7 +179,6 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
                     key={index}
                     index={index}
                     device={device}
-                    isSelected={selectedDevice === device}
                     onClick={() => handleDeviceSelect(device)}
                 />
             )) : (

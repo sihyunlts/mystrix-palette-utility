@@ -231,14 +231,14 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
           })}
         </div>
       </div>
-      <div className={styles.housingLabel}>{title}</div>
+      <div className={`${styles.housingLabel} text-code color-muted font-size-sm`}>{title}</div>
     </div>
   );
 
   return (
     <div className={styles.gridContainer}>
-      {mystrixHousing(0, '0-63')}
-      {mystrixHousing(64, '64-127')}
+      {mystrixHousing(0, '0 - 63')}
+      {mystrixHousing(64, '64 - 127')}
     </div>
   );
 };
