@@ -532,13 +532,6 @@ const AppContent: React.FC = () => {
     { label: 'Slot 4', value: 4 },
   ];
 
-  const urlOptions = [
-    { label: 'sihyunlights.com', url: 'https://sihyunlights.com' },
-    { label: 'MatrixOS wiki', url: 'https://matrix.203.io' },
-    { label: 'MatrixOS Control Map Editor', url: 'https://edit.203.io/' },
-    { label: 'MatrixOS Simulator', url: 'https://demo.203.io' },
-  ];
-
   return (
     <div className={styles.root}>
         <header className={styles.header}>
