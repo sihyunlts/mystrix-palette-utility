@@ -1,0 +1,30 @@
+/* GlobalAdjustmentBox Component Styles */
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  width: 100%;
+}
+
+.labelSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 70px;
+}
+
+.resetButton {
+  cursor: pointer;
+  color: var(--color-danger);
+  font-size: var(--label-small-font-size);
+  text-decoration: underline;
+  font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  flex: 1;
+}

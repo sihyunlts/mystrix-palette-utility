@@ -1,19 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Color } from '../types';
+import styles from './ColorPicker.module.css';
 
 interface ColorPickerProps {
   color: Color;
   onChange: (color: Color) => void;
   size?: number;
 }
-
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: '10px',
-  color: 'var(--color-text-dim)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  fontWeight: 500
-};
 
 export const ColorPicker: React.FC<ColorPickerProps> = ({ 
   color, 
@@ -167,19 +160,17 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  const colorStyle = {
+  const swatchStyle = {
     backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})`,
     width: size,
-    height: size,
-    borderRadius: '4px',
-    border: '2px solid #333',
-    cursor: 'pointer'
+    height: size
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className={styles.container}>
       <div
-        style={colorStyle}
+        className={styles.colorSwatch}
+        style={swatchStyle}
         onClick={(e) => {
             e.stopPropagation();
             setIsOpen(!isOpen);
@@ -189,68 +180,28 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       {isOpen && (
         <>
           <div 
-            style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 999,
-                cursor: 'default'
-            }}
+            className={styles.backdrop}
             onClick={() => setIsOpen(false)}
           />
           <div
             ref={pickerRef}
             onClick={(e) => e.stopPropagation()} 
-            style={{
-                position: 'absolute',
-                top: size + 10,
-                left: 0,
-                background: 'var(--color-bg-surface)',
-                padding: '12px',
-                borderRadius: 'var(--radius-main)',
-                border: '1px solid var(--color-border)',
-                zIndex: 1000,
-                minWidth: '220px',
-                boxShadow: 'var(--shadow-intense)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px'
-            }}
+            className={styles.picker}
+            style={{ top: size + 10 }}
             >
           {/* Saturation/Lightness picker */}
           <div
             ref={slRef}
-            style={{
-              width: '100%',
-              height: '140px',
-              background: `hsl(${hue}, 100%, 50%)`,
-              position: 'relative',
-              cursor: 'crosshair',
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}
+            className={styles.slPicker}
+            style={{ background: `hsl(${hue}, 100%, 50%)` }}
             onMouseDown={handleSLMouseDown}
           >
+            <div className={styles.slGradient} />
             <div
+              className={styles.slCursor}
               style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(to right, white, transparent), linear-gradient(to top, black, transparent)',
-                pointerEvents: 'none'
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
                 left: `${saturation}%`,
-                top: `${100 - lightness}%`,
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                border: '2px solid white',
-                transform: 'translate(-50%, -50%)',
-                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-                pointerEvents: 'none'
+                top: `${100 - lightness}%`
               }}
             />
           </div>
@@ -258,52 +209,27 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           {/* Hue picker */}
           <div
             ref={hueRef}
-            style={{
-              width: '100%',
-              height: '16px',
-              background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
-              cursor: 'pointer',
-              position: 'relative',
-              borderRadius: '8px'
-            }}
+            className={styles.huePicker}
             onMouseDown={handleHueMouseDown}
           >
             <div
-              style={{
-                position: 'absolute',
-                left: `${hue / 3.6}%`,
-                top: '50%',
-                width: '12px',
-                height: '12px',
-                background: 'white',
-                transform: 'translate(-50%, -50%)',
-                borderRadius: '50%',
-                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-                pointerEvents: 'none'
-              }}
+              className={styles.hueCursor}
+              style={{ left: `${hue / 3.6}%` }}
             />
           </div>
 
           {/* RGB inputs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          <div className={styles.rgbInputs}>
             {['r', 'g', 'b'].map((channel) => (
-                <div key={channel} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={LABEL_STYLE}>{channel.toUpperCase()}</label>
+                <div key={channel} className={styles.inputGroup}>
+                    <label className={styles.label}>{channel.toUpperCase()}</label>
                     <input
                     type="number"
                     min="0"
                     max="255"
                     value={(color as any)[channel]}
                     onChange={(e) => onChange({ ...color, [channel]: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-                    style={{ 
-                        width: '100%', 
-                        padding: '6px',
-                        backgroundColor: 'var(--color-bg-subtle)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-subtle)',
-                        color: 'var(--color-text-main)',
-                        fontSize: '12px'
-                    }}
+                    className={styles.input}
                     />
                 </div>
             ))}

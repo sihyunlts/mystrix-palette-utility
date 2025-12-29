@@ -1,5 +1,6 @@
-import React, { memo, useRef } from 'react';
+import React, { memo } from 'react';
 import { Color, Palette } from '../types';
+import styles from './MystrixPreview.module.css';
 
 interface PaletteGridProps {
   palette: Palette;
@@ -102,44 +103,42 @@ const Pad = memo(({
   const offGradId = `off-grad-${index}`;
   const lightshowGradId = `ls-grad-${index}`;
 
+  const padClass = `${styles.pad} ${isSelected ? styles.selected : ''} ${isLightshowActive ? styles.noTransition : ''}`;
+  const padStyle = {
+    transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+  };
+
+  const svgFilter = (() => {
+    const size = isSelected ? 6 : (lightshowColorData ? 4 : 2);
+    const color = lightshowColorData 
+      ? getColors(lightshowColorData, false).glow 
+      : (isLightshowActive ? offColors.glow : baseColors.glow);
+    return `drop-shadow(0 0 ${size}px ${color})`;
+  })();
+
   return (
     <div
-      style={{
-        height: '100%',
-        aspectRatio: '1 / 1',
-        position: 'relative',
-        transition: isLightshowActive ? 'none' : 'all 0.15s ease-out',
-        transform: isSelected ? 'scale(1.1)' : 'scale(1)', // Slight reduction to prevent excessive overflow
-        zIndex: isSelected ? 10 : 1,
-        willChange: 'transform, filter', // Promote to GPU layer for smoother SVG filters
-      }}
+      className={padClass}
+      style={padStyle}
       onClick={() => onClick?.(index)}
     >
       <svg 
         viewBox="-5 -5 110 110" 
-        style={{ 
-          filter: (() => {
-            const size = isSelected ? 6 : (lightshowColorData ? 4 : 2);
-            const color = lightshowColorData 
-              ? getColors(lightshowColorData, false).glow 
-              : (isLightshowActive ? offColors.glow : baseColors.glow);
-            return `drop-shadow(0 0 ${size}px ${color})`;
-          })(),
-        }}
+        style={{ filter: svgFilter }}
       >
         <defs>
           {/* Palette LED */}
           <radialGradient id={paletteGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="30%" stopColor={baseColors.core} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="70%" stopColor={baseColors.mid} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="100%" stopColor={baseColors.edge} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="0%" stopColor={baseColors.core} className={styles.gradientStop} />
+            <stop offset="30%" stopColor={baseColors.core} className={styles.gradientStop} />
+            <stop offset="70%" stopColor={baseColors.mid} className={styles.gradientStop} />
+            <stop offset="100%" stopColor={baseColors.edge} className={styles.gradientStop} />
           </radialGradient>
           <radialGradient id={offGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="30%" stopColor={offColors.core} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="70%" stopColor={offColors.mid} style={{ transition: 'stop-color 0.08s' }} />
-            <stop offset="100%" stopColor={offColors.edge} style={{ transition: 'stop-color 0.08s' }} />
+            <stop offset="0%" stopColor={offColors.core} className={styles.gradientStop} />
+            <stop offset="30%" stopColor={offColors.core} className={styles.gradientStop} />
+            <stop offset="70%" stopColor={offColors.mid} className={styles.gradientStop} />
+            <stop offset="100%" stopColor={offColors.edge} className={styles.gradientStop} />
           </radialGradient>
           {lightshowColorsSet && (
             <radialGradient id={lightshowGradId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
@@ -165,9 +164,7 @@ const Pad = memo(({
           stroke={isSelected ? "#fff" : "none"}
           strokeWidth={isSelected ? 4 : 0}
           strokeLinejoin="round"
-          style={{ 
-            transition: 'all 0.08s',
-          }}
+          className={styles.paletteOverlay}
         />
 
         {/* MIDI LED */}
@@ -196,21 +193,7 @@ const Pad = memo(({
       </svg>
 
       {isSelected && !isLightshowActive && (
-        <div style={{
-          position: 'absolute',
-          bottom: '-22px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: '#fff',
-          color: '#000',
-          fontSize: '10px',
-          fontWeight: 700,
-          padding: '1px 5px',
-          borderRadius: '2px',
-          whiteSpace: 'nowrap',
-          zIndex: 10,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-        }}>
+        <div className={styles.padLabel}>
           {index}
         </div>
       )}
@@ -228,25 +211,9 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
   const baseColors = palette.colors;
 
   const mystrixHousing = (startIdx: number, title: string) => (
-    <div style={{ textAlign: 'center', flex: '1 1 360px' }}>
-      <div style={{
-        backgroundColor: 'var(--color-bg-surface-alt)',
-        padding: '3.4%',
-        borderRadius: 'var(--radius-main)',
-        border: '1px solid var(--color-bg-surface)',
-        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), var(--shadow-pad)',
-        width: '100%',
-        aspectRatio: '1 / 1',
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(8, 1fr)`,
-          gridTemplateRows: `repeat(8, 1fr)`,
-          gap: '0.4%',
-          width: '100%',
-          height: '100%',
-          aspectRatio: '1 / 1',
-        }}>
+    <div className={styles.housingContainer}>
+      <div className={styles.housing}>
+        <div className={styles.grid}>
           {Array.from({ length: 64 }, (_, i) => {
             const idx = startIdx + i;
             return (
@@ -264,18 +231,12 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
           })}
         </div>
       </div>
-      <div style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</div>
+      <div className={styles.housingLabel}>{title}</div>
     </div>
   );
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      gap: '20px', 
-      marginBottom: '20px',
-      justifyContent: 'center',
-      flexWrap: 'wrap' // Allow wrapping on small screens
-    }}>
+    <div className={styles.gridContainer}>
       {mystrixHousing(0, '0-63')}
       {mystrixHousing(64, '64-127')}
     </div>

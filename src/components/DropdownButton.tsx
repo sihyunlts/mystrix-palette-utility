@@ -1,15 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './Button';
+import styles from './DropdownButton.module.css';
+
+type DropdownOption = 
+  | { label: string; value: number; url?: never }
+  | { label: string; url: string; value?: never };
 
 interface DropdownButtonProps {
   label: string;
-  options: { label: string; value: number }[];
-  onSelect: (value: number) => void;
+  options: DropdownOption[];
+  onSelect?: (value: number) => void;
   disabled?: boolean;
   color?: string; // Kept for backward compat, mapped to style
   loading?: boolean;
   loadingLabel?: string;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'; // Added explicit variant
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  dropdownPosition?: 'top' | 'bottom';
+  align?: 'left' | 'right';
 }
 
 export const DropdownButton: React.FC<DropdownButtonProps> = ({
@@ -20,29 +27,52 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   color,
   loading = false,
   loadingLabel = 'Loading...',
-  variant = 'primary'
+  variant = 'primary',
+  dropdownPosition = 'top',
+  align = 'left'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleOptionClick = (option: DropdownOption) => {
+    if ('value' in option && option.value !== undefined && onSelect) {
+      onSelect(option.value);
+    }
+    setIsOpen(false);
+  };
+
+  const buttonClass = `${styles.button} ${isOpen ? styles.open : ''}`;
+  const iconClass = `${styles.icon} ${isOpen ? styles.open : ''}`;
+  const menuClass = `${styles.menu} ${styles[dropdownPosition]} ${styles[`align${align.charAt(0).toUpperCase() + align.slice(1)}`]}`;
+
+  const buttonStyle = color ? { backgroundColor: color } : {};
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }} ref={dropdownRef}>
+    <div className={styles.container} ref={dropdownRef}>
       <Button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled || loading}
         isLoading={loading}
         variant={variant}
-        style={{
-            ...(color ? { backgroundColor: color } : {}),
-            minWidth: '140px',
-            justifyContent: 'space-between',
-            position: 'relative',
-            zIndex: isOpen ? 101 : 'auto'
-        }}
+        className={buttonClass}
+        style={buttonStyle}
       >
-        <span>{loading ? loadingLabel : label}</span>
+        {loading ? loadingLabel : label}
         {!loading && (
-          <span style={{ fontSize: '10px', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span className={iconClass}>
             ▼
           </span>
         )}
@@ -51,58 +81,47 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
       {/* Backdrop */}
       {isOpen && (
         <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 90,
-            cursor: 'default'
-          }}
+          className={styles.backdrop}
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {isOpen && (
-        <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: 0,
-          right: 0, 
-          marginBottom: '8px',
-          backgroundColor: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-subtle)',
-          overflow: 'hidden',
-          zIndex: 100,
-          boxShadow: 'var(--shadow-main)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          {options.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => {
-                onSelect(option.value);
-                setIsOpen(false);
-              }}
-              style={{
-                textAlign: 'left',
-                padding: '12px 16px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-important)',
-                cursor: 'pointer',
-                fontSize: '14px',
-                borderBottom: '1px solid var(--color-border)',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-subtle)'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className={menuClass}>
+          {options.map((option, index) => {
+            const isLink = 'url' in option && option.url !== undefined;
+
+            if (isLink) {
+              return (
+                <a
+                  key={index}
+                  href={option.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsOpen(false)}
+                  className={styles.menuItem}
+                >
+                  {option.label}
+                </a>
+              );
+            }
+
+            return (
+              <button
+                key={option.value}
+                onClick={() => handleOptionClick(option)}
+                className={styles.menuItem}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
+
+// LinkDropdownButton is now integrated into DropdownButton
+// Use DropdownButton with options containing 'url' property instead
+export const LinkDropdownButton = DropdownButton;

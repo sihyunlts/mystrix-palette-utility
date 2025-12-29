@@ -1,0 +1,86 @@
+/* Dropdown Button Component Styles */
+
+.container {
+  position: relative;
+  display: inline-block;
+}
+
+.button {
+  min-width: 140px;
+  justify-content: space-between;
+  position: relative;
+}
+
+.button.open {
+  z-index: var(--z-dropdown-button);
+}
+
+.icon {
+  font-size: var(--button-icon-size);
+  transition: var(--button-icon-transition);
+}
+
+.icon.open {
+  transform: rotate(180deg);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-backdrop);
+ cursor: default;
+}
+
+.menu {
+  position: absolute;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-subtle);
+  overflow: hidden;
+  z-index: var(--z-dropdown);
+  box-shadow: var(--shadow-main);
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.menu.top {
+  bottom: 100%;
+  margin-bottom: var(--spacing-sm);
+}
+
+.menu.bottom {
+  top: 100%;
+  margin-top: var(--spacing-sm);
+}
+
+.menu.alignLeft {
+  left: 0;
+}
+
+.menu.alignRight {
+  right: 0;
+}
+
+.menuItem {
+  text-align: left;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: transparent;
+  border: none;
+  color: var(--color-text-main);
+  cursor: pointer;
+  font-size: var(--button-font-size);
+  font-weight: var(--button-font-weight);
+  line-height: var(--button-line-height);
+  transition: background-color 0.2s;
+  display: block;
+  width: 100%;
+}
+
+.menuItem:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.menuItem:hover {
+  background-color: var(--color-bg-subtle);
+}

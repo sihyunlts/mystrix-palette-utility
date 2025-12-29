@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MIDIManager } from '../utils/midi';
 import { Button } from './Button';
+import styles from './MIDIConnection.module.css';
 
 interface MIDIConnectionProps {
   onDeviceConnected: (device: MIDIOutput) => void;
@@ -17,25 +18,19 @@ const DeviceButton: React.FC<{
 }> = ({ device, isSelected, index, onClick }) => {
     const [isHovered, setIsHovered] = useState(false);
     
+    const buttonClass = `${styles.deviceButton} ${isSelected ? styles.selected : ''}`;
+    const buttonStyle = {
+        backgroundColor: isSelected ? 'var(--color-primary)' : (isHovered ? 'rgba(255, 255, 255, 0.1)' : undefined),
+        borderColor: isSelected ? 'var(--color-primary)' : undefined
+    };
+
     return (
         <button
             onClick={onClick}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                padding: '12px',
-                backgroundColor: isSelected ? 'var(--color-primary)' : (isHovered ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-bg-subtle)'),
-                border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                borderRadius: 'var(--radius-subtle)',
-                cursor: 'pointer',
-                color: 'var(--color-text-main)',
-                transition: 'all 0.2s',
-                gap: '4px',
-                width: '100%'
-            }}
+            className={buttonClass}
+            style={buttonStyle}
         >
             <span>{device.name}</span>
             <span className="text-label">{device.manufacturer} - Port {index + 1}</span>
@@ -48,8 +43,8 @@ const SectionHeader: React.FC<{
     onButtonClick: () => void;
 }> = ({ buttonText, onButtonClick }) => {
     return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-main)'}}>Select Device</h3>
+        <div className={styles.header}>
+            <h3 className={styles.headerTitle}>Select Device</h3>
             <Button onClick={onButtonClick} variant="ghost" style={{ padding: '4px 8px', fontSize: '12px' }}>
                 ↻ {buttonText}
             </Button>
@@ -57,11 +52,7 @@ const SectionHeader: React.FC<{
     );
 };
 
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px'
-};
+
 
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   onDeviceConnected,
@@ -163,7 +154,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>
+      <div className={styles.loadingBox}>
         <div>Initializing MIDI...</div>
       </div>
     );
@@ -174,22 +165,11 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     const portNumber = deviceIndex !== -1 ? deviceIndex + 1 : '?';
     
     return (
-      <div style={containerStyle}>
+      <div className={styles.container}>
         <SectionHeader buttonText="Disconnect" onButtonClick={handleRefresh} />
         
-        <div style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: '12px',
-            backgroundColor: 'var(--color-bg-subtle)',
-            border: '1px solid var(--color-accent)',
-            borderRadius: 'var(--radius-subtle)',
-            color: 'var(--color-text-main)',
-            gap: '4px',
-            width: '100%',
-        }}>
-          <span style={{ color: 'var(--color-accent)' }}>{deviceName}</span>
+        <div className={styles.connectedDevice}>
+          <span className={styles.deviceName}>{deviceName}</span>
           <span className="text-label">{selectedDevice?.manufacturer} - Port {portNumber}</span>
         </div>
       </div>
@@ -197,29 +177,15 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   }
 
   return (
-    <div style={containerStyle}>
+    <div className={styles.container}>
       <SectionHeader buttonText="Refresh" onButtonClick={handleRefresh} />
 
       {error ? (
-        <div style={{ 
-            padding: '16px', 
-            backgroundColor: 'rgba(244, 67, 54, 0.1)', 
-            border: '1px solid var(--color-danger)',
-            borderRadius: 'var(--radius-subtle)',
-            color: 'var(--color-danger)',
-            fontSize: '13px',
-            textAlign: 'center'
-        }}>
+        <div className={styles.errorBox}>
           {error}
         </div>
       ) : (
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '8px',
-            maxHeight: '200px',
-            overflowY: 'auto'
-        }}>
+        <div className={styles.deviceList}>
             {availableDevices.length > 0 ? availableDevices.map((device, index) => (
                 <DeviceButton
                     key={index}
@@ -229,7 +195,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
                     onClick={() => handleDeviceSelect(device)}
                 />
             )) : (
-                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-dim)', fontSize: '13px' }}>
+                <div className={styles.emptyState}>
                     No devices detected.
                 </div>
             )}

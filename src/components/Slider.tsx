@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from './Slider.module.css';
 
 interface SliderProps {
   value: number;
@@ -9,20 +10,6 @@ interface SliderProps {
   valueDisplay?: React.ReactNode;
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: '12px',
-  color: 'var(--color-text-dim)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  fontWeight: 500,
-  marginBottom: '8px'
-};
-
-const CODE_STYLE: React.CSSProperties = {
-  fontFamily: "'Space Mono', monospace",
-  fontSize: '13px'
-};
-
 export const Slider: React.FC<SliderProps> = ({ 
   value, 
   min, 
@@ -32,37 +19,22 @@ export const Slider: React.FC<SliderProps> = ({
   valueDisplay 
 }) => {
   const isChanged = value !== 0;
+  const percentage = ((value - min) / (max - min)) * 100;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {label && <span style={LABEL_STYLE}>{label}</span>}
+    <div className={styles.container}>
+      <div className={styles.header}>
+        {label && <span className={styles.label}>{label}</span>}
         {valueDisplay && (
-          <code 
-            style={{ ...CODE_STYLE, color: isChanged ? 'var(--color-accent)' : 'var(--color-text-dim)' }}
-          >
+          <code className={`${styles.valueDisplay} ${isChanged ? styles.changed : ''}`}>
             {valueDisplay}
           </code>
         )}
       </div>
-      <div style={{ position: 'relative', height: '4px', width: '100%', display: 'flex', alignItems: 'center' }}>
+      <div className={styles.sliderWrapper}>
          {/* Track */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          backgroundColor: '#333',
-          borderRadius: '2px',
-          overflow: 'hidden'
-        }}>
-           <div style={{
-               height: '100%',
-               width: `${((value - min) / (max - min)) * 100}%`,
-               backgroundColor: 'var(--color-accent)',
-               transition: 'width 0.1s ease-out'
-           }} />
+        <div className={styles.track}>
+           <div className={styles.fill} style={{ width: `${percentage}%` }} />
         </div>
         
         {/* Input */}
@@ -72,31 +44,11 @@ export const Slider: React.FC<SliderProps> = ({
           max={max} 
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ 
-            width: '100%', 
-            cursor: 'pointer', 
-            height: '100%', 
-            opacity: 0, // Hide default input but keep it interactive
-            margin: 0,
-            zIndex: 2,
-            position: 'absolute'
-          }}
+          className={styles.input}
         />
         
         {/* Thumb (Visual Only) */}
-        <div style={{
-             position: 'absolute',
-             left: `${((value - min) / (max - min)) * 100}%`,
-             width: '12px',
-             height: '12px',
-             backgroundColor: '#fff',
-             borderRadius: '50%',
-             transform: 'translate(-50%)',
-             pointerEvents: 'none',
-             boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-             zIndex: 1,
-             transition: 'left 0.1s ease-out'
-        }} />
+        <div className={styles.thumb} style={{ left: `${percentage}%` }} />
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './util
 import { LightshowPlayer, HardwareLightshowEvent, UILightshowEvent } from './utils/LightshowPlayer';
 import { applyGlobalSettings } from './utils/colorUtils';
 import { Midi } from '@tonejs/midi';
+import styles from './App.module.css';
 
 // Dynamic Preset Loader
 // Scan src/presets for any files and treat them as palette data
@@ -37,7 +38,8 @@ const INITIAL_PRESETS = presetsContext.keys()
   });
 
 // Parse once for the definitive reference of "Factory" colors
-const DEFAULT_PALETTE_COLORS = parsePaletteFile(`0, 0 0 0;
+const DEFAULT_PALETTE_COLORS = parsePaletteFile(
+`0, 0 0 0;
 1, 7 7 7;
 2, 31 31 31;
 3, 63 63 63;
@@ -202,23 +204,11 @@ const InfoBadge: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onCli
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      className={styles.infoBadge}
       style={{
-        position: 'absolute',
-        right: '8px',
-        width: '20px',
-        height: '20px',
-        borderRadius: '50%',
-        border: `1px solid ${isHovered ? 'var(--color-primary)' : 'var(--color-border)'}`,
+        borderColor: isHovered ? 'var(--color-primary)' : 'var(--color-border)',
         backgroundColor: isHovered ? 'rgba(65, 113, 255, 0.05)' : 'transparent',
-        color: isHovered ? 'var(--color-primary)' : 'var(--color-text-dim)',
-        fontSize: '11px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        padding: 0,
-        zIndex: 2
+        color: isHovered ? 'var(--color-primary)' : 'var(--color-text-dim)'
       }}
     >
       i
@@ -241,26 +231,6 @@ const AppContent: React.FC = () => {
     const isMobile = width <= 900;
     const isSmallMobile = width <= 600;
 
-    const LABEL_STYLE: React.CSSProperties = {
-      fontSize: '12px',
-      color: 'var(--color-text-dim)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      fontWeight: 500
-    };
-
-    const COMMON_SIDEBAR_DIV_STYLE: React.CSSProperties = {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-      padding: '24px',
-      backgroundColor: 'var(--color-bg-surface)',
-      borderRadius: 'var(--radius-main)',
-      border: '1px solid var(--color-border)',
-      height: 'fit-content',
-      width: isMobile ? '100%' : '320px',
-      order: isMobile ? -1 : 0
-    };
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
@@ -576,64 +546,50 @@ const AppContent: React.FC = () => {
     { label: 'Slot 4', value: 4 },
   ];
 
+  const urlOptions = [
+    { label: 'sihyunlights.com', url: 'https://sihyunlights.com' },
+    { label: 'MatrixOS wiki', url: 'https://matrix.203.io' },
+    { label: 'MatrixOS Control Map Editor', url: 'https://edit.203.io/' },
+    { label: 'MatrixOS Simulator', url: 'https://demo.203.io' },
+  ];
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: 'var(--color-bg-main)', 
-      color: 'var(--color-text-main)',
-      padding: '40px' 
-    }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-        <header style={{ 
-          marginBottom: '40px', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'baseline',
-          borderBottom: '1px solid var(--color-border)',
-          paddingBottom: '20px'
-        }}>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600 }}>
-            Mystrix <span style={{ color: 'var(--color-accent)' }}>Palette</span> Editor
+    <div className={styles.root}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>
+            Mystrix <span className={styles.titleAccent}>Palette</span> Editor
           </h1>
+          
+          <DropdownButton
+            label="Links"
+            options={urlOptions}
+            variant="ghost"
+            dropdownPosition="bottom"
+            align="right"
+          />
         </header>
-
-        <main style={{ 
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '320px 1fr',
-            gap: '24px'
-        }}>
-          {/* Left Column: Branding and Connection */}
-          <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ ...COMMON_SIDEBAR_DIV_STYLE}}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
-                  Mystrix <span style={{ color: 'var(--color-accent)' }}>Palette</span>
-                </h1>
-              </div>
-
-              <div style={{ 
-                paddingTop: '20px',
-                borderTop: '1px solid var(--color-border)'
-              }}>
+      <div className={styles.container}>
+        <main className={`${styles.main} ${isMobile ? styles.mobile : ''}`}>
+          {/* Left Column */}
+          <aside className={`${styles.leftColumn}`}>
+            <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
                 <MIDIConnection
                   onDeviceConnected={handleDeviceConnected}
                   onDeviceDisconnected={handleDeviceDisconnected}
                   selectedDevice={selectedDevice}
                   onDeviceSelect={handleDeviceSelect}
                 />
-              </div>
-              
             </div>
-            <div style={{ ...COMMON_SIDEBAR_DIV_STYLE}}>
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-dim)', lineHeight: '1.4' }}>
+            <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
+                  <div className={styles.previewDescription}>
                     Upload a MIDI file to preview the lightshow effect on the grid.
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className={styles.previewControls}>
                     <Button 
                         variant="ghost" 
                         onClick={() => previewInputRef.current?.click()}
-                        style={{ flex: 1, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        className={styles.previewButton}
                     >
                       {previewFile ? previewFile.name : 'Select MIDI File'}
                     </Button>
@@ -654,13 +610,8 @@ const AppContent: React.FC = () => {
           </aside>
 
           {/* Right Column: Main Workspace */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-            <div style={{
-              backgroundColor: 'var(--color-bg-surface)',
-              padding: '24px',
-              borderRadius: 'var(--radius-main)',
-              border: '1px solid var(--color-border)',
-            }}>
+          <div className={styles.centerColumn}>
+            <div className={styles.workspace}>
               <PaletteGrid
                 palette={effectivePalette}
                 selectedIndex={selectedColorIndex}
@@ -669,11 +620,8 @@ const AppContent: React.FC = () => {
                 isLightshowActive={isLightshowActive}
               />
 
-              <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px', marginTop: '24px' }}>
-                <div style={{
-                  flex: '1 1 360px',
-                  display: 'flex',
-                }}>
+              <div className={styles.controls}>
+                <div className={styles.controlSection}>
                   <SelectedPadInfo
                     selectedIndex={selectedColorIndex}
                     color={(selectedColorIndex !== undefined ? palette.colors[selectedColorIndex] : null) || { r: 0, g: 0, b: 0 }}
@@ -682,14 +630,7 @@ const AppContent: React.FC = () => {
                 </div>
 
                 {globalSaturation !== undefined && globalContrast !== undefined && (
-                  <div style={{
-                    flex: '1 1 360px',
-                    borderRadius: 'var(--radius-main)',
-                    border: '1px solid var(--color-border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '20px'
-                  }}>
+                  <div className={styles.globalAdjustmentWrapper}>
                     <GlobalAdjustmentBox 
                       saturation={globalSaturation}
                       contrast={globalContrast}
@@ -700,20 +641,10 @@ const AppContent: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap',
-                gap: '12px',
-                paddingTop: '30px',
-                borderTop: '1px solid var(--color-border)',
-                marginTop: '20px',
-                justifyContent: 'space-between',
-                flexDirection: isSmallMobile ? 'column' : 'row',
-                alignItems: isSmallMobile ? 'stretch' : 'center'
-              }}>
-                <div style={{ display: 'flex', gap: '12px' }}>
+              <div className={`${styles.actionBar} ${isSmallMobile ? styles.mobile : ''}`}>
+                <div className={styles.actionGroup}>
                   <DropdownButton 
-                      label="Upload to..." 
+                      label="Upload" 
                       options={slotOptions} 
                       onSelect={handleUpload}
                       disabled={isUploading || !midiOutput}
@@ -722,7 +653,7 @@ const AppContent: React.FC = () => {
                   />
                   
                   <DropdownButton 
-                      label="Delete from..." 
+                      label="Delete" 
                       options={slotOptions} 
                       onSelect={handleDelete}
                       disabled={isUploading || !midiOutput}
@@ -730,7 +661,7 @@ const AppContent: React.FC = () => {
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className={styles.actionGroup}>
                   <Button
                       variant="secondary"
                       onClick={handleLoadFile}
@@ -748,24 +679,22 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Presets Box */}
-            <div style={{
-              backgroundColor: 'var(--color-bg-surface)',
-              padding: '24px',
-              borderRadius: 'var(--radius-main)',
-              border: '1px solid var(--color-border)',
-            }}>
-              <div style={{ ...LABEL_STYLE, marginBottom: '16px' }}>
+          </div>
+
+          {/* Right Column: Presets */}
+          <aside className={`${styles.rightColumn}`}>
+            <div className={`sidebar ${styles.presetSection} ${isMobile ? styles.mobile : ''}`}>
+              <div className="text-label-small" style={{ marginBottom: 'var(--spacing-lg)' }}>
                 Palette Presets
               </div>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div className={styles.presetList}>
                 {INITIAL_PRESETS.map((preset: any) => (
-                  <div key={preset.id} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div key={preset.id} className={styles.presetItem}>
                     <Button
                       variant="ghost"
                       active={palette.name === preset.name}
                       onClick={() => handleApplyPreset(preset.url, preset.name)}
-                      style={{ fontSize: '13px', paddingRight: '36px' }}
+                      className={styles.presetButton}
                     >
                       {preset.name}
                     </Button>
@@ -783,7 +712,7 @@ const AppContent: React.FC = () => {
                 ))}
               </div>
             </div>
-          </div>
+          </aside>
         </main>
       </div>
       <input
@@ -794,14 +723,14 @@ const AppContent: React.FC = () => {
             const file = e.target.files?.[0];
             if (file) setPreviewFile(file);
         }}
-        style={{ display: 'none' }}
+        className={styles.hiddenInput}
       />
       <input
         ref={fileInputRef}
         type="file"
         accept="*"
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        className={styles.hiddenInput}
       />
     </div>
   );
