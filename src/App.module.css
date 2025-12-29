@@ -15,6 +15,17 @@
   align-items: center;
 }
 
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  height: 24px;
+  width: 24px;
+}
+
 .title {
   margin: 0;
   font-weight: 600;

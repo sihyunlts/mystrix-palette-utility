@@ -535,9 +535,12 @@ const AppContent: React.FC = () => {
   return (
     <div className={styles.root}>
         <header className={styles.header}>
-          <h1 className={styles.title}>
-            Mystrix Palette Utility
-          </h1>
+          <div className={styles.logoContainer}>
+            <img src="/favicon.ico" alt="Mystrix Logo" className={styles.logo} />
+            <h1 className={styles.title}>
+              Mystrix Palette Utility
+            </h1>
+          </div>
           
           <DropdownButton
             label="Links"
