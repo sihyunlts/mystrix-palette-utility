@@ -27,11 +27,11 @@ export const zh = {
       uhhOkay: "额... 好的"
     },
     labels: {
-      global: "全局设置",
+      saturationAndContrast: "色度及对比度",
       slot: "插槽",
       selectedPad: "已选打击垫",
       rgbValue: "RGB 值",
-      saturation: "饱和度",
+      saturation: "色度",
       contrast: "对比度"
     },
     messages: {

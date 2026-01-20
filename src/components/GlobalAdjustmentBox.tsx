@@ -29,7 +29,7 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
   return (
     <div className={styles.container}>
       <SectionHeader 
-        title={t('labels.global')} 
+        title={t('labels.saturationAndContrast')} 
         buttonText={hasChanges ? t('buttons.reset') : undefined}
         onButtonClick={handleReset}
       />

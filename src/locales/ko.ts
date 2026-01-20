@@ -27,7 +27,7 @@ export const ko = {
       uhhOkay: "음... 알겠어요"
     },
     labels: {
-      global: "전역 설정",
+      saturationAndContrast: "채도 및 대비",
       slot: "슬롯",
       selectedPad: "선택된 패드",
       rgbValue: "RGB 값",

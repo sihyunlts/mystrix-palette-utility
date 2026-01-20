@@ -27,7 +27,7 @@ export const en = {
       uhhOkay: "Uhh okay"
     },
     labels: {
-      global: "Global",
+      saturationAndContrast: "Saturation & Contrast",
       slot: "Slot",
       selectedPad: "Selected Pad",
       rgbValue: "RGB Value",
