@@ -28,12 +28,19 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
     }, 200);
   };
 
+  // Close picker if no pad is selected
+  React.useEffect(() => {
+    if (selectedIndex === undefined && isOpen && !isClosing) {
+      handleClose();
+    }
+  }, [selectedIndex, isOpen, isClosing]);
+
   return (
     <div className={styles.container}>
       <SectionHeader title={t('labels.selectedPad')} />
       
       <div className={styles.content}>
-        <div className={`${styles.swatchWrapper} ${selectedIndex === undefined ? styles.disabled : ''}`}>
+        <div className={styles.swatchWrapper}>
           <div 
             className={styles.swatch}
             style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}

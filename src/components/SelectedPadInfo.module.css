@@ -39,11 +39,6 @@
   align-items: center;
 }
 
-.swatchWrapper.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
 .swatch {
   width: 100%;
   height: 100%;
@@ -59,8 +54,6 @@
   left: 0;
   z-index: 1000;
 }
-
-
 
 .backdrop {
   position: fixed;
