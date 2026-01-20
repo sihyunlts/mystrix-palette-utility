@@ -176,21 +176,9 @@ const NOTE_TO_PAD_INDEX: Record<number, number> = (() => {
   return map;
 })();
 
-const useWindowWidth = () => {
-  const [width, setWidth] = React.useState(window.innerWidth);
-  React.useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  return width;
-};
 
 const AppContent: React.FC = () => {
     const { t, i18n } = useTranslation();
-    const width = useWindowWidth();
-    const isMobile = width <= 900;
-    const isSmallMobile = width <= 600;
 
   const { showModal } = useModal();
   const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
@@ -400,9 +388,8 @@ const AppContent: React.FC = () => {
         <header className={styles.header}>
           <div className={styles.logoContainer}>
             <img src="/favicon.ico" alt="Mystrix Palette Utility" className={styles.logo} />
-            <h1 className={styles.title}>
-              {t('title')}
-            </h1>
+            <h1 className={styles.titleFull}>{t('title')}</h1>
+            <h1 className={styles.titleShort}>{t('titleShort')}</h1>
           </div>
           
           <div className={styles.headerActions}>
@@ -440,10 +427,10 @@ const AppContent: React.FC = () => {
           </div>
         </header>
       <div className={styles.container}>
-        <main className={`${styles.main} ${isMobile ? styles.mobile : ''}`}>
+        <main className={styles.main}>
           {/* Left Column */}
           <aside className={`${styles.leftColumn}`}>
-            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
+            <div className={styles.sidebar}>
                 <MIDIConnection
                   onDeviceConnected={handleDeviceConnected}
                   onDeviceDisconnected={handleDeviceDisconnected}
@@ -451,7 +438,7 @@ const AppContent: React.FC = () => {
                   onDeviceSelect={handleDeviceSelect}
                 />
             </div>
-            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
+            <div className={styles.sidebar}>
                   <SectionHeader title={t('sections.preview')} />
                   <div className={`font-size-md`}>
                     {t('messages.previewDesc')}
@@ -513,7 +500,7 @@ const AppContent: React.FC = () => {
                 )}
               </div>
 
-              <div className={`${styles.actionBar} ${isSmallMobile ? styles.mobile : ''}`}>
+              <div className={styles.actionBar}>
                 <div className={styles.actionGroup}>
                   <DropdownButton 
                       label={t('buttons.upload')} 
@@ -555,7 +542,7 @@ const AppContent: React.FC = () => {
 
           {/* Right Column */}
           <aside className={`${styles.rightColumn}`}>
-            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
+            <div className={styles.sidebar}>
               <SectionHeader title={t('sections.presets')} />
               <div className={styles.presetList}>
                 {INITIAL_PRESETS.map((preset: any) => (

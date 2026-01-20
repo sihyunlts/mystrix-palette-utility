@@ -231,7 +231,7 @@ export const PaletteGrid: React.FC<PaletteGridProps> = ({
           })}
         </div>
       </div>
-      <div className={`${styles.housingLabel} text-code color-muted font-size-sm`}>{title}</div>
+      <div className={`${styles.housingLabel} text-code color-muted font-size-md`}>{title}</div>
     </div>
   );
 

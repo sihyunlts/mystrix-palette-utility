@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Slider } from './Slider';
+import { SectionHeader } from './SectionHeader';
 import styles from './GlobalAdjustmentBox.module.css';
 
 interface GlobalAdjustmentBoxProps {
@@ -27,17 +28,11 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.labelSection}>
-        <span className="font-size-md">{t('labels.global')}</span>
-        {hasChanges && (
-          <div 
-            onClick={handleReset}
-            className={styles.resetButton}
-          >
-           {t('buttons.reset')}
-          </div>
-        )}
-      </div>
+      <SectionHeader 
+        title={t('labels.global')} 
+        buttonText={hasChanges ? t('buttons.reset') : undefined}
+        onButtonClick={handleReset}
+      />
 
       <div className={styles.controls}>
         <Slider

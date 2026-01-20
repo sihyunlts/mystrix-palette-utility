@@ -1,6 +1,7 @@
 export const ko = {
   translation: {
     title: "Mystrix 팔레트 유틸리티",
+    titleShort: "팔레트 유틸리티",
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "웹사이트 공사중."

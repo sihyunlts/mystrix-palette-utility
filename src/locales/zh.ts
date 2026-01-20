@@ -1,6 +1,7 @@
 export const zh = {
   translation: {
     title: "Mystrix 调色板工具",
+    titleShort: "调色板工具",
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "网站建设中。"

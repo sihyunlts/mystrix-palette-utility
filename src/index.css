@@ -130,5 +130,4 @@ h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); m
 /* --- Special Styles --- */
 .text-code {
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: var(--font-size-base);
 }

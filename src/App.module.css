@@ -1,5 +1,3 @@
-ㄴ/* App Component Styles */
-
 .root {
   min-height: 100vh;
   background-color: var(--color-bg-main);
@@ -13,6 +11,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 var(--spacing-xl);
 }
 
 .headerActions {
@@ -37,19 +36,20 @@
   color: var(--color-text-main);
 }
 
+.titleFull { display: block; }
+.titleShort { display: none; }
+
 .container {
   max-width: 1600px;
   margin: 0 auto;
+  padding: 0 var(--spacing-xl);
 }
 
 .main {
   display: grid;
-  grid-template-columns: 320px 1fr 320px;
+  grid-template-columns: minmax(260px, 320px) 1fr minmax(260px, 320px);
   gap: var(--spacing-2xl);
-}
-
-.main.mobile {
-  grid-template-columns: 1fr;
+  align-items: start;
 }
 
 .leftColumn,
@@ -57,10 +57,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2xl);
+  width: 100%;
 }
 
 .sidebar {
-  width: 320px;
+  width: 100%;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xl);
@@ -69,11 +71,6 @@
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
   height: fit-content;
-}
-
-.sidebar.mobile {
-  width: 100%;
-  order: -1;
 }
 
 .previewControls {
@@ -91,6 +88,7 @@
 .centerColumn {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 30px;
 }
 
@@ -99,6 +97,7 @@
   padding: var(--spacing-2xl);
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
+  min-width: 0;
 }
 
 .controls {
@@ -116,11 +115,7 @@
 
 .globalAdjustmentWrapper {
   flex: 1 1 360px;
-  border-radius: var(--radius-main);
-  border: 1px solid var(--color-border);
   display: flex;
-  align-items: center;
-  padding: var(--spacing-xl);
 }
 
 .actionBar {
@@ -132,11 +127,6 @@
   margin-top: var(--spacing-xl);
   justify-content: space-between;
   align-items: center;
-}
-
-.actionBar.mobile {
-  flex-direction: column;
-  align-items: stretch;
 }
 
 .actionGroup {
@@ -165,6 +155,7 @@
 .hiddenInput {
   display: none;
 }
+
 .footer {
   grid-column: 2;
   padding: 40px 0;
@@ -172,4 +163,31 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2xs);
+}
+
+/* --- Responsive Layout --- */
+@media (max-width: 960px) {
+  .titleFull { display: none; }
+  .titleShort { display: block; }
+
+  .main {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    max-width: none;
+  }
+
+  .workspace {
+    padding: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 600px) {
+  .actionBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

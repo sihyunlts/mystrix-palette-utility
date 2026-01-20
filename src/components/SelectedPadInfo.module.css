@@ -3,18 +3,31 @@
 .container {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--spacing-xl);
   padding: var(--spacing-xl);
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
 }
 
-.group {
+.content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+}
+
+.indexSection {
+  display: flex;
+  align-items: center;
+}
+
+.colorSection {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
 }
+
 
 .label {
   text-transform: uppercase;

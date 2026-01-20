@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Color } from '../types';
 import { ColorPicker } from './ColorPicker';
+import { SectionHeader } from './SectionHeader';
 import styles from './SelectedPadInfo.module.css';
 
 interface SelectedPadInfoProps {
@@ -19,32 +20,33 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.group}>
-        <span className={`${styles.label} font-size-sm`}>{t('labels.selectedPad')}</span>
-        <div className={styles.divider} />
-        
-        <span className={`${styles.indexValue} font-size-lg`}>
-          {selectedIndex !== undefined ? selectedIndex : '---'}
-        </span>
-      </div>
-
-      <div className={styles.divider} />
-
-      <div className={styles.group}>
-        <div className={`${styles.colorPickerWrapper} ${selectedIndex === undefined ? styles.disabled : ''}`}>
-          <ColorPicker
-            color={color}
-            onChange={onColorChange}
-            size={50}
-          />
+      <SectionHeader title={t('labels.selectedPad')} />
+      
+      <div className={styles.content}>
+        <div className={styles.indexSection}>
+          <span className={`${styles.indexValue} font-size-lg`}>
+            {selectedIndex !== undefined ? selectedIndex : '---'}
+          </span>
         </div>
-        <div className={styles.rgbGroup}>
-          <span className={`${styles.label} font-size-sm`}>{t('labels.rgbValue')}</span>
-          <code className={`${styles.rgbValue} font-size-sm`}>
-            {selectedIndex !== undefined 
-              ? `${color.r}, ${color.g}, ${color.b}`
-              : '-, -, -'}
-          </code>
+
+        <div className={styles.divider} />
+
+        <div className={styles.colorSection}>
+          <div className={`${styles.colorPickerWrapper} ${selectedIndex === undefined ? styles.disabled : ''}`}>
+            <ColorPicker
+              color={color}
+              onChange={onColorChange}
+              size={50}
+            />
+          </div>
+          <div className={styles.rgbGroup}>
+            <span className={`${styles.label} font-size-sm`}>{t('labels.rgbValue')}</span>
+            <code className={`${styles.rgbValue} font-size-sm`}>
+              {selectedIndex !== undefined 
+                ? `${color.r}, ${color.g}, ${color.b}`
+                : '-, -, -'}
+            </code>
+          </div>
         </div>
       </div>
     </div>

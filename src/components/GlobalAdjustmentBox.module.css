@@ -1,20 +1,14 @@
 .container {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--spacing-xl);
   width: 100%;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-main);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
 }
 
-.labelSection {
-  display: flex;
-  flex-direction: column;
-}
-
-.resetButton {
-  cursor: pointer;
-  color: var(--color-negative);
-  text-decoration: underline;
-}
 
 .controls {
   display: flex;

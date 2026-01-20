@@ -1,6 +1,7 @@
 export const en = {
   translation: {
     title: "Mystrix Palette Utility",
+    titleShort: "Palette Utility",
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "website under construction."

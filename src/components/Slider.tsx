@@ -26,7 +26,7 @@ export const Slider: React.FC<SliderProps> = ({
       <div className={styles.header}>
         {label && <span className={`${styles.label} font-size-sm`}>{label}</span>}
         {valueDisplay && (
-          <code className={`${styles.valueDisplay} font-size-md ${isChanged ? styles.changed : ''}`}>
+          <code className={`${styles.valueDisplay} font-size-sm ${isChanged ? styles.changed : ''}`}>
             {valueDisplay}
           </code>
         )}
