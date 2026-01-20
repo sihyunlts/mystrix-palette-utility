@@ -16,45 +16,43 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
-  const [lightness, setLightness] = useState(50);
+  const [value, setValue] = useState(100); // HSV value (brightness)
   const pickerRef = useRef<HTMLDivElement>(null);
   const slRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
 
-  // Convert RGB to HSL
+  // Convert RGB to HSV
   useEffect(() => {
-    const { h, s, l } = rgbToHsl(color.r, color.g, color.b);
-    // If saturation is 0 (achromatic), preserve the current hue instead of resetting to 0
+    const { h, s, v } = rgbToHsv(color.r, color.g, color.b);
+    // Preserving hue for gray colors
     if (s > 0) {
       setHue(h);
     }
     setSaturation(s);
-    setLightness(l);
+    setValue(v);
   }, [color]);
 
-  // Convert HSL to RGB
-  const hslToRgb = (h: number, s: number, l: number): Color => {
-    h /= 360;
+  // Convert HSV to RGB
+  const hsvToRgb = (h: number, s: number, v: number): Color => {
     s /= 100;
-    l /= 100;
-
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs((h * 6) % 2 - 1));
-    const m = l - c / 2;
+    v /= 100;
+    const c = v * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = v - c;
 
     let r = 0, g = 0, b = 0;
 
-    if (0 <= h && h < 1/6) {
+    if (h >= 0 && h < 60) {
       r = c; g = x; b = 0;
-    } else if (1/6 <= h && h < 2/6) {
+    } else if (h >= 60 && h < 120) {
       r = x; g = c; b = 0;
-    } else if (2/6 <= h && h < 3/6) {
+    } else if (h >= 120 && h < 180) {
       r = 0; g = c; b = x;
-    } else if (3/6 <= h && h < 4/6) {
+    } else if (h >= 180 && h < 240) {
       r = 0; g = x; b = c;
-    } else if (4/6 <= h && h < 5/6) {
+    } else if (h >= 240 && h < 300) {
       r = x; g = 0; b = c;
-    } else if (5/6 <= h && h < 1) {
+    } else {
       r = c; g = 0; b = x;
     }
 
@@ -65,20 +63,20 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     };
   };
 
-  // Convert RGB to HSL
-  const rgbToHsl = (r: number, g: number, b: number) => {
+  // Convert RGB to HSV
+  const rgbToHsv = (r: number, g: number, b: number) => {
     r /= 255;
     g /= 255;
     b /= 255;
 
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
+    const d = max - min;
+    let h = 0;
+    const s = max === 0 ? 0 : d / max;
+    const v = max;
 
     if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
       switch (max) {
         case r: h = (g - b) / d + (g < b ? 6 : 0); break;
         case g: h = (b - r) / d + 2; break;
@@ -90,15 +88,15 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     return {
       h: Math.round(h * 360),
       s: Math.round(s * 100),
-      l: Math.round(l * 100)
+      v: Math.round(v * 100)
     };
   };
 
-  const handleColorChange = (newH: number, newS: number, newL: number) => {
+  const handleColorChange = (newH: number, newS: number, newV: number) => {
     setHue(newH);
     setSaturation(newS);
-    setLightness(newL);
-    const newColor = hslToRgb(newH, newS, newL);
+    setValue(newV);
+    const newColor = hsvToRgb(newH, newS, newV);
     onChange(newColor);
   };
 
@@ -113,19 +111,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
       const s = Math.round((x / rect.width) * 100);
-      const l = Math.round(100 - (y / rect.height) * 100);
-      handleColorChange(hue, s, l);
+      const v = Math.round(100 - (y / rect.height) * 100);
+      handleColorChange(hue, s, v);
     };
 
     update(e.clientX, e.clientY);
 
     const onMouseMove = (me: MouseEvent) => {
-        update(me.clientX, me.clientY);
+      update(me.clientX, me.clientY);
     };
 
     const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -142,18 +140,20 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     const update = (clientX: number) => {
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const h = Math.round((x / rect.width) * 360);
-      handleColorChange(h, saturation, lightness);
+      // Hue is periodic, handle 360 as 0
+      const finalH = h === 360 ? 0 : h;
+      handleColorChange(finalH, saturation, value);
     };
 
     update(e.clientX);
 
     const onMouseMove = (me: MouseEvent) => {
-        update(me.clientX);
+      update(me.clientX);
     };
 
     const onMouseUp = () => {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -172,8 +172,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         className={styles.colorSwatch}
         style={swatchStyle}
         onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(!isOpen);
+          e.stopPropagation();
+          setIsOpen(!isOpen);
         }}
       />
       
@@ -189,11 +189,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             className={styles.picker}
             style={{ top: size + 10 }}
             >
-          {/* Saturation/Lightness picker */}
+          {/* Saturation/Value picker */}
           <div
             ref={slRef}
             className={styles.slPicker}
-            style={{ background: `hsl(${hue}, 100%, 50%)` }}
+            style={{ backgroundColor: `hsl(${hue}, 100%, 50%)` }}
             onMouseDown={handleSLMouseDown}
           >
             <div className={styles.slGradient} />
@@ -201,7 +201,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               className={styles.slCursor}
               style={{
                 left: `${saturation}%`,
-                top: `${100 - lightness}%`
+                top: `${100 - value}%`
               }}
             />
           </div>
@@ -221,17 +221,20 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           {/* RGB inputs */}
           <div className={styles.rgbInputs}>
             {['r', 'g', 'b'].map((channel) => (
-                <div key={channel} className={styles.inputGroup}>
-                    <label className={`${styles.label} font-size-sm`}>{channel.toUpperCase()}</label>
-                    <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={(color as any)[channel]}
-                    onChange={(e) => onChange({ ...color, [channel]: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-                    className={`${styles.input} font-size-sm`}
-                    />
-                </div>
+              <div key={channel} className={styles.inputGroup}>
+                <label className={`${styles.label} font-size-sm`}>{channel.toUpperCase()}</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="255"
+                  value={(color as any)[channel]}
+                  onChange={(e) => {
+                    const val = Math.min(255, Math.max(0, parseInt(e.target.value) || 0));
+                    onChange({ ...color, [channel]: val });
+                  }}
+                  className={`${styles.input} font-size-sm`}
+                />
+              </div>
             ))}
           </div>
         </div>
