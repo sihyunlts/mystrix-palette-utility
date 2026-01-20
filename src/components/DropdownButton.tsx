@@ -93,7 +93,7 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
 
             if (option.type === 'header') {
               return (
-                <div key={index} className={`${styles.sectionHeader} font-size-sm color-dim`}>
+                <div key={index} className={`${styles.sectionHeader} font-size-sm`}>
                   {option.label}
                 </div>
               );

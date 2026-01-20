@@ -1,8 +1,8 @@
 :root {
   /* Core Colors */
-  --color-primary: #4977ff;
-  --color-danger: #ff4a40;
-  --color-accent: #00ffaa;
+  --color-primary: #537eff;
+  --color-negative: #ef4a41;
+  --color-positive: #00ffaa;
   
   /* Backgrounds & Surfaces */
   --color-bg-main: rgb(16, 16, 18);
@@ -28,6 +28,7 @@
   --radius-subtle: 4px;
 
   /* Spacing */
+  --spacing-2xs: 4px;
   --spacing-xs: 6px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -37,8 +38,8 @@
   
   /* Typography Tokens */
   --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
   --font-size-xl: 20px;
   
   --font-weight-normal: 400;
@@ -84,8 +85,8 @@ span {
 
 /* Base Headings */
 h1 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.01em;}
-h2 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.01em;}
-h3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.00em;}
+h2 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.01em;}
+h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; letter-spacing: -0.00em;}
 
 /* 1. Size Utilities (Includes Defaults) */
 .font-size-sm { 
@@ -95,10 +96,10 @@ h3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold);
   line-height: 1.4;
 }
 .font-size-md { 
-  font-size: var(--font-size-base); 
+  font-size: var(--font-size-md); 
   color: var(--color-text-dim); 
-  font-weight: var(--font-weight-medium); 
-  line-height: 1.45;
+  font-weight: var(--font-weight-normal); 
+  line-height: 1.5;
 }
 .font-size-lg { 
   font-size: var(--font-size-lg); 
@@ -123,23 +124,11 @@ h3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold);
 .color-dim      { color: var(--color-text-dim); }
 .color-muted    { color: var(--color-text-muted); }
 .color-primary  { color: var(--color-primary); }
-.color-accent   { color: var(--color-accent); }
-.color-danger   { color: var(--color-danger); }
+.color-negative   { color: var(--color-negative); }
+.color-positive   { color: var(--color-positive); }
 
 /* --- Special Styles --- */
 .text-code {
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
   font-size: var(--font-size-base);
-}
-
-/* --- Layout --- */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2xl);
-  padding: var(--spacing-2xl);
-  background-color: var(--color-bg-surface);
-  border-radius: var(--radius-main);
-  border: 1px solid var(--color-border);
-  height: fit-content;
 }

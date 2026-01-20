@@ -32,6 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const classNames = [
     styles.button,
+    'font-weight-medium',
     size === 'small' ? 'font-size-sm' : 'font-size-md',
     size === 'small' ? styles.small : '',
     getColorClass(),
@@ -41,7 +42,6 @@ export const Button: React.FC<ButtonProps> = ({
     className
   ].filter(Boolean).join(' ');
 
-  // 아이콘과 텍스트가 함께 있는지 확인
   const hasIcon = icon && children;
 
   const renderIcon = () => (

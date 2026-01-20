@@ -1,14 +1,14 @@
 /* Button Component Styles */
 
 .button {
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-subtle);
   cursor: pointer;
   transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   border: none; /* Reset default button border */
 }
 
@@ -22,7 +22,7 @@
 }
 
 .danger {
-  background-color: var(--color-danger);
+  background-color: var(--color-negative);
 }
 
 .ghost {
@@ -37,7 +37,7 @@
 
 .icon {
   background-color: transparent;
-  padding: 4px;
+  padding: var(--spacing-2xs);
   min-width: auto;
   border: none;
 }
@@ -48,9 +48,9 @@
 
 .badge {
   position: absolute;
-  right: 12px;
+  right: var(--spacing-md);
   background-color: transparent;
-  padding: 4px;
+  padding: var(--spacing-2xs);
   min-width: auto;
   border: none;
   z-index: 2;
@@ -67,6 +67,6 @@
 }
 
 .small {
-  padding: 4px 8px;
+  padding: var(--spacing-2xs) var(--spacing-sm);
   gap: var(--spacing-xs);
 }

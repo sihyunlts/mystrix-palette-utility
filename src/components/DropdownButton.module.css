@@ -74,11 +74,11 @@
 }
 
 .divider {
-  height: 6px;
+  height: var(--spacing-xs);
   background-color: var(--color-border);
 }
 
 .sectionHeader {
-  padding: 12px 12px 4px 12px;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-2xs) var(--spacing-md);
   white-space: nowrap;
 }

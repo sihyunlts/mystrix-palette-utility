@@ -20,10 +20,10 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.group}>
-        <span className={styles.label}>{t('labels.selectedPad')}</span>
+        <span className={`${styles.label} font-size-sm`}>{t('labels.selectedPad')}</span>
         <div className={styles.divider} />
         
-        <span className={styles.indexValue}>
+        <span className={`${styles.indexValue} font-size-lg`}>
           {selectedIndex !== undefined ? selectedIndex : '---'}
         </span>
       </div>
@@ -39,8 +39,8 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
           />
         </div>
         <div className={styles.rgbGroup}>
-          <span className={styles.label}>{t('labels.rgbValue')}</span>
-          <code className={styles.rgbValue}>
+          <span className={`${styles.label} font-size-sm`}>{t('labels.rgbValue')}</span>
+          <code className={`${styles.rgbValue} font-size-sm`}>
             {selectedIndex !== undefined 
               ? `${color.r}, ${color.g}, ${color.b}`
               : '-, -, -'}

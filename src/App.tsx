@@ -405,7 +405,7 @@ const AppContent: React.FC = () => {
             </h1>
           </div>
           
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className={styles.headerActions}>
             <DropdownButton
               label={t('dropdown.language')}
               variant="ghost"
@@ -443,7 +443,7 @@ const AppContent: React.FC = () => {
         <main className={`${styles.main} ${isMobile ? styles.mobile : ''}`}>
           {/* Left Column */}
           <aside className={`${styles.leftColumn}`}>
-            <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
+            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
                 <MIDIConnection
                   onDeviceConnected={handleDeviceConnected}
                   onDeviceDisconnected={handleDeviceDisconnected}
@@ -451,9 +451,9 @@ const AppContent: React.FC = () => {
                   onDeviceSelect={handleDeviceSelect}
                 />
             </div>
-            <div className={`sidebar ${styles.sidebarSection} ${isMobile ? styles.mobile : ''}`}>
+            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
                   <SectionHeader title={t('sections.preview')} />
-                  <div className={`${styles.previewDescription} font-size-sm`}>
+                  <div className={`font-size-md`}>
                     {t('messages.previewDesc')}
                   </div>
 
@@ -461,7 +461,7 @@ const AppContent: React.FC = () => {
                     <Button 
                         variant="ghost" 
                         onClick={() => previewInputRef.current?.click()}
-                        className={styles.previewButton}
+                        className={`${styles.previewButton} font-size-sm`}
                     >
                       {previewFile ? previewFile.name : t('buttons.selectFile')}
                     </Button>
@@ -481,7 +481,7 @@ const AppContent: React.FC = () => {
                 </div>
           </aside>
 
-          {/* Right Column: Main Workspace */}
+          {/* Center Column */}
           <div className={styles.centerColumn}>
             <div className={styles.workspace}>
               <PaletteGrid
@@ -553,9 +553,9 @@ const AppContent: React.FC = () => {
 
           </div>
 
-          {/* Right Column: Presets */}
+          {/* Right Column */}
           <aside className={`${styles.rightColumn}`}>
-            <div className={`sidebar ${styles.presetSection} ${isMobile ? styles.mobile : ''}`}>
+            <div className={`${styles.sidebar} ${isMobile ? styles.mobile : ''}`}>
               <SectionHeader title={t('sections.presets')} />
               <div className={styles.presetList}>
                 {INITIAL_PRESETS.map((preset: any) => (
@@ -564,7 +564,7 @@ const AppContent: React.FC = () => {
                       variant="ghost"
                       active={palette.name === preset.name}
                       onClick={() => handleApplyPreset(preset.url, preset.name)}
-                      className={styles.presetButton}
+                      className={`${styles.presetButton} font-size-sm`}
                     >
                       {preset.name}
                     </Button>
@@ -588,7 +588,7 @@ const AppContent: React.FC = () => {
           </aside>
         </main>
         <footer className={styles.footer}>
-          <div className="font-size-md color-dim">{t('footer.by')}</div>
+          <div className="font-size-md">{t('footer.by')}</div>
           <div className="font-size-md color-muted font-weight-normal">{t('footer.status')}</div>
         </footer>
       </div>

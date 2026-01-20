@@ -28,7 +28,7 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.labelSection}>
-        <span className="font-size-xs">{t('labels.global')}</span>
+        <span className="font-size-md">{t('labels.global')}</span>
         {hasChanges && (
           <div 
             onClick={handleReset}

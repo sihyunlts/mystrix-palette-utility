@@ -17,7 +17,7 @@
 
 .dialog {
   background-color: var(--color-bg-surface);
-  padding: 24px;
+  padding: var(--spacing-2xl);
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
   width: 90%;
@@ -28,23 +28,17 @@
 }
 
 .title {
-  margin: 0 0 12px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-main);
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .message {
-  margin: 0 0 24px 0;
-  color: var(--color-text-dim);
-  font-size: 14px;
-  line-height: 1.5;
+  margin: 0 0 var(--spacing-2xl) 0;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 @keyframes modalPop {

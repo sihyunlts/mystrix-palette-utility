@@ -52,8 +52,8 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {isOpen && options && (
         <div className={styles.overlay} onClick={handleCancel}>
           <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.title}>{options.title}</h3>
-            <p className={styles.message}>{options.message}</p>
+            <h3 className={`${styles.title} font-size-lg`}>{options.title}</h3>
+            <p className={`${styles.message} font-size-md`}>{options.message}</p>
             <div className={styles.actions}>
               {options.type === 'confirm' && (
                 <Button variant="ghost" onClick={handleCancel}>

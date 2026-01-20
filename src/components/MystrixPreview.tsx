@@ -193,7 +193,7 @@ const Pad = memo(({
       </svg>
 
       {isSelected && !isLightshowActive && (
-        <div className={styles.padLabel}>
+        <div className={`${styles.padLabel} font-size-sm`}>
           {index}
         </div>
       )}

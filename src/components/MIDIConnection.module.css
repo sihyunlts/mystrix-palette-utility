@@ -3,7 +3,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 /* Base style for device items (shared between button and connected display) */
@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px;
+  padding: var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-subtle);
   gap: var(--spacing-xs);
@@ -29,7 +29,7 @@
 }
 
 .connectedDevice {
-  border-color: var(--color-accent);
+  border-color: var(--color-positive);
 }
 
 .deviceList {
@@ -39,21 +39,18 @@
 }
 
 .errorBox {
-  padding: 16px;
-  border: 1px solid var(--color-danger);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-negative);
   border-radius: var(--radius-subtle);
-  color: var(--color-danger);
   text-align: center;
 }
 
 .loadingBox {
   text-align: center;
-  color: var(--color-text-dim);
-  padding: 20px;
+  padding: var(--spacing-xl);
 }
 
 .emptyState {
   text-align: center;
-  padding: 20px;
-  color: var(--color-text-dim);
+  padding: var(--spacing-xl);
 }

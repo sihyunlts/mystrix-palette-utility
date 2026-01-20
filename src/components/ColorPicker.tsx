@@ -222,14 +222,14 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           <div className={styles.rgbInputs}>
             {['r', 'g', 'b'].map((channel) => (
                 <div key={channel} className={styles.inputGroup}>
-                    <label className={styles.label}>{channel.toUpperCase()}</label>
+                    <label className={`${styles.label} font-size-sm`}>{channel.toUpperCase()}</label>
                     <input
                     type="number"
                     min="0"
                     max="255"
                     value={(color as any)[channel]}
                     onChange={(e) => onChange({ ...color, [channel]: Math.min(255, Math.max(0, parseInt(e.target.value) || 0)) })}
-                    className={styles.input}
+                    className={`${styles.input} font-size-sm`}
                     />
                 </div>
             ))}

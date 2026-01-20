@@ -24,7 +24,7 @@ const DeviceButton: React.FC<{
             onClick={onClick}
             className={className}
         >
-            <span className={`font-size-md color-main ${isConnected ? 'color-accent font-weight-bold' : ''}`}>
+            <span className={`font-size-md color-main font-weight-medium ${isConnected ? 'color-positive font-weight-bold' : ''}`}>
                 {device.name}
             </span>
             <span className="font-size-sm">
@@ -139,7 +139,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
   if (isLoading) {
     return (
-      <div className={styles.loadingBox}>
+      <div className={`${styles.loadingBox} font-size-md`}>
         <div>{t('messages.initializing')}</div>
       </div>
     );
@@ -180,7 +180,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
 
       {error ? (
         <div className={styles.errorBox}>
-          <span className='font-size-md color-danger'>{error}</span>
+          <span className='font-size-md color-negative'>{error}</span>
         </div>
       ) : (
         <div className={styles.deviceList}>
@@ -192,7 +192,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
                     onClick={() => handleDeviceSelect(device)}
                 />
             )) : (
-                <div className={styles.emptyState}>
+                <div className={`${styles.emptyState} font-size-md`}>
                     {t('messages.noDevices')}
                 </div>
             )}
