@@ -428,7 +428,7 @@ const AppContent: React.FC = () => {
       <div className={styles.container}>
         <main className={styles.main}>
           {/* Left Column */}
-          <aside className={`${styles.leftColumn}`}>
+          <aside className={`${styles.leftColumn} animate-fade-in-up`} style={{ animationDelay: '0.1s' }}>
             <div className={styles.sidebar}>
                 <MIDIConnection
                   onDeviceConnected={handleDeviceConnected}
@@ -468,7 +468,7 @@ const AppContent: React.FC = () => {
           </aside>
 
           {/* Center Column */}
-          <div className={styles.centerColumn}>
+          <div className={`${styles.centerColumn} animate-fade-in-up`} style={{ animationDelay: '0.2s' }}>
             <div className={styles.workspace}>
               <PaletteGrid
                 palette={effectivePalette}
@@ -540,7 +540,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Right Column */}
-          <aside className={`${styles.rightColumn}`}>
+          <aside className={`${styles.rightColumn} animate-fade-in-up`} style={{ animationDelay: '0.3s' }}>
             <div className={styles.sidebar}>
               <SectionHeader title={t('sections.presets')} />
               <div className={styles.presetList}>
