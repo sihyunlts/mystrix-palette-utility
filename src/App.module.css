@@ -5,9 +5,9 @@
 }
 
 .header {
-  margin: 0 auto var(--spacing-sm) auto;
+  margin: 0 auto var(--spacing-xs) auto;
   max-width: 1600px;
-  height: 60px;
+  height: 72px;
   display: flex;
   justify-content: space-between;
   align-items: center;
