@@ -18,21 +18,22 @@ import { Midi } from '@tonejs/midi';
 import styles from './App.module.css';
 
 // Dynamic Preset Loader
-// Scan src/presets for any files and treat them as palette data
-const presetsContext = (require as any).context('./presets', false, /.*/);
+// Vite equivalent of require.context
+const presets = import.meta.glob('./presets/*', { query: '?url', eager: true });
 
-const INITIAL_PRESETS = presetsContext.keys()
-  .filter((key: string) => !key.endsWith('.ts') && !key.endsWith('.js'))
-  .map((key: string) => {
-    const id = key.replace('./', '').replace(/\.[^/.]+$/, "").toLowerCase();
-    const name = key.replace('./', '').replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
-    return {
-      id: key,
-      cleanId: id,
-      name: name,
-      url: presetsContext(key)
-    };
-  });
+const INITIAL_PRESETS = Object.entries(presets).map(([path, module]: [string, any]) => {
+  const filename = path.split('/').pop() || '';
+  if (filename.endsWith('.ts') || filename.endsWith('.js')) return null;
+  
+  const id = filename.replace(/\.[^/.]+$/, "").toLowerCase();
+  const name = filename.replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
+  return {
+    id: path,
+    cleanId: id,
+    name: name,
+    url: module.default || module
+  };
+}).filter((p): p is any => p !== null);
 
 // Parse once for the definitive reference of "Factory" colors
 const DEFAULT_PALETTE_COLORS = parsePaletteFile(
