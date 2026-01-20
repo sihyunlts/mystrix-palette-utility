@@ -11,8 +11,12 @@
   gap: var(--spacing-sm);
   border: none; /* Reset default button border */
 }
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
-/* ... existing variants ... */
 .primary {
   background-color: var(--color-primary);
 }
