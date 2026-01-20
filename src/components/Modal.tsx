@@ -23,6 +23,7 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [options, setOptions] = useState<ModalOptions | null>(null);
   
   // Store the resolve function of the promise
@@ -31,27 +32,31 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const showModal = (options: ModalOptions): Promise<boolean> => {
     setOptions(options);
     setIsOpen(true);
+    setIsClosing(false);
     return new Promise((resolve) => {
       setResolver(() => resolve);
     });
   };
 
-  const handleConfirm = () => {
-    setIsOpen(false);
-    resolver?.(true);
+  const closeModal = (value: boolean) => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+      setOptions(null);
+      resolver?.(value);
+    }, 150); // Match CSS animation duration
   };
 
-  const handleCancel = () => {
-    setIsOpen(false);
-    resolver?.(false);
-  };
+  const handleConfirm = () => closeModal(true);
+  const handleCancel = () => closeModal(false);
 
   return (
     <ModalContext.Provider value={{ showModal }}>
       {children}
       {isOpen && options && (
-        <div className={styles.overlay} onClick={handleCancel}>
-          <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        <div className={`${styles.overlay} ${isClosing ? styles.closing : ''}`} onClick={handleCancel}>
+          <div className={`${styles.dialog} ${isClosing ? styles.closing : ''}`} onClick={(e) => e.stopPropagation()}>
             <h3 className={`${styles.title} font-size-lg`}>{options.title}</h3>
             <p className={`${styles.message} font-size-md`}>{options.message}</p>
             <div className={styles.actions}>
