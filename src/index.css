@@ -62,6 +62,13 @@
   box-sizing: border-box;
   color: var(--color-text-main);
   font-weight: var(--font-weight-normal);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 body {
