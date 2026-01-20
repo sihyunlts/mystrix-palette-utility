@@ -18,6 +18,15 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 200);
+  };
 
   return (
     <div className={styles.container}>
@@ -28,11 +37,16 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
           <div 
             className={styles.swatch}
             style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => {
+              if (isOpen) handleClose();
+              else setIsOpen(true);
+            }}
           />
-          {isOpen && (
-            <div className={styles.popover}>
-              <div className={styles.backdrop} onClick={() => setIsOpen(false)} />
+            {isOpen && (
+              <div 
+                className={`${styles.popover} ${isClosing ? 'animate-pop-out' : 'animate-pop-in'}`}
+              >
+              <div className={styles.backdrop} onClick={handleClose} />
               <ColorPicker
                 color={color}
                 onChange={onColorChange}

@@ -34,37 +34,63 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   align = 'left'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 200);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        handleClose();
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !isClosing) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen]);
+  }, [isOpen, isClosing]);
 
   const handleOptionClick = (option: DropdownOption) => {
     if ('value' in option && option.value !== undefined && onSelect) {
       onSelect(option.value);
     }
-    setIsOpen(false);
+    handleClose();
   };
 
   const buttonClass = `${styles.button} ${isOpen ? styles.open : ''}`;
-  const menuClass = `${styles.menu} ${styles[dropdownPosition]} ${styles[`align${align.charAt(0).toUpperCase() + align.slice(1)}`]}`;
+  
+  // Animation logic
+  let animationClass = '';
+  if (isOpen) {
+    if (isClosing) {
+      animationClass = dropdownPosition === 'top' ? 'animate-pop-out-up' : 'animate-pop-out';
+    } else {
+      animationClass = dropdownPosition === 'top' ? 'animate-pop-in-up' : 'animate-pop-in';
+    }
+  }
+
+  const menuClass = `${styles.menu} ${styles[dropdownPosition]} ${styles[`align${align.charAt(0).toUpperCase() + align.slice(1)}`]} ${animationClass}`;
 
   const buttonStyle = color ? { backgroundColor: color } : {};
 
   return (
     <div className={styles.container} ref={dropdownRef}>
       <Button
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => {
+            if (isOpen) {
+                handleClose();
+            } else {
+                setIsOpen(true);
+            }
+        }}
         disabled={disabled || loading}
         isLoading={loading}
         variant={variant}
@@ -80,12 +106,14 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
       {isOpen && (
         <div 
           className={styles.backdrop}
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
         />
       )}
 
       {isOpen && (
-        <div className={menuClass}>
+        <div 
+          className={menuClass}
+        >
           {options.map((option, index) => {
             if (option.type === 'divider') {
               return <div key={index} className={styles.divider} />;

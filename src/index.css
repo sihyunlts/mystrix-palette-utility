@@ -131,3 +131,40 @@ h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); m
 .text-code {
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
+
+/* Animations */
+.animate-pop-in {
+  animation: pop-in 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.animate-pop-in-up {
+  animation: pop-in-up 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.animate-pop-out {
+  animation: pop-out 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.animate-pop-out-up {
+  animation: pop-out-up 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pop-in-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+@keyframes pop-out-up {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
