@@ -11,10 +11,8 @@ import { SelectedPadInfo } from './components/SelectedPadInfo';
 import { GlobalAdjustmentBox } from './components/GlobalAdjustmentBox';
 import { SectionHeader } from './components/SectionHeader';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
-import { LightshowPlayer, HardwareLightshowEvent, UILightshowEvent } from './utils/LightshowPlayer';
 import { applyGlobalSettings } from './utils/colorUtils';
 import { useLightshow } from './hooks/useLightshow';
-import { Midi } from '@tonejs/midi';
 import styles from './App.module.css';
 
 // Dynamic Preset Loader
