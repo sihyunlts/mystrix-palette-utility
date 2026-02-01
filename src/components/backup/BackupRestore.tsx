@@ -236,7 +236,7 @@ export const BackupRestore: React.FC = () => {
                 backup.folders.push({ 
                     id, 
                     name: FOLDER_NAMES[id] || `Unknown Folder (${id})`,
-                    color: `#${(color >>> 0).toString(16).padStart(8, '0').toUpperCase()}`,
+                    color: `#${(color & 0xFFFFFF).toString(16).padStart(6, '0').toUpperCase()}`,
                     apps 
                 });
             }
