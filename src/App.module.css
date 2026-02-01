@@ -30,14 +30,11 @@
   width: 24px;
 }
 
-.title {
+.logoContainer h1 {
   margin: 0;
-  font-weight: 600;
-  color: var(--color-text-main);
+  display: flex;
+  align-items: center;
 }
-
-.titleFull { display: block; }
-.titleShort { display: none; }
 
 .container {
   max-width: 1600px;
@@ -71,6 +68,22 @@
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
   height: fit-content;
+}
+
+.pageTitleDropdown > button {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  padding: 0 0 !important;
+  background: transparent !important;
+  border: none !important;
+  height: auto !important;
+  color: var(--color-text-main) !important;
+  gap: var(--spacing-xs) !important;
+  min-width: auto !important;
+}
+
+.pageTitleDropdown > button i {
+  font-size: 0.9375rem !important;
 }
 
 .previewControls {
@@ -167,8 +180,6 @@
 
 /* --- Responsive Layout --- */
 @media (max-width: 960px) {
-  .titleFull { display: none; }
-  .titleShort { display: block; }
 
   .main {
     grid-template-columns: 1fr;

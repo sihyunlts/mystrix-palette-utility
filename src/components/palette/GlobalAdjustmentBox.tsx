@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider } from './Slider';
-import { SectionHeader } from './SectionHeader';
+import { Slider } from '../ui/Slider';
+import { SectionHeader } from '../ui/SectionHeader';
 import styles from './GlobalAdjustmentBox.module.css';
 
 interface GlobalAdjustmentBoxProps {

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Color } from '../types';
+import { Color } from '../../types';
 import { ColorPicker } from './ColorPicker';
-import { SectionHeader } from './SectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 import styles from './SelectedPadInfo.module.css';
 
 interface SelectedPadInfoProps {

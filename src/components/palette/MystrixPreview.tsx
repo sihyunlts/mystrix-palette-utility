@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Color, Palette } from '../types';
+import { Color, Palette } from '../../types';
 import styles from './MystrixPreview.module.css';
 
 interface PaletteGridProps {

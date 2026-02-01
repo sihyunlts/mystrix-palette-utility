@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MIDIManager } from '../utils/midi';
-import { SectionHeader } from './SectionHeader';
+import { MIDIManager } from '../../utils/midi';
+import { SectionHeader } from '../ui/SectionHeader';
 import styles from './MIDIConnection.module.css';
 
 interface MIDIConnectionProps {

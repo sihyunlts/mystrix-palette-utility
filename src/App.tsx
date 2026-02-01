@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next';
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
-import { MIDIConnection } from './components/MIDIConnection';
-import { PaletteGrid } from './components/MystrixPreview';
-import { DropdownButton } from './components/DropdownButton';
-import { Button } from './components/Button';
-import { ModalProvider, useModal } from './components/Modal';
-import { SelectedPadInfo } from './components/SelectedPadInfo';
-import { GlobalAdjustmentBox } from './components/GlobalAdjustmentBox';
-import { SectionHeader } from './components/SectionHeader';
+import { MIDIConnection } from './components/midi/MIDIConnection';
+import { PaletteGrid } from './components/palette/MystrixPreview';
+import { DropdownButton } from './components/ui/DropdownButton';
+import { Button } from './components/ui/Button';
+import { ModalProvider, useModal } from './components/ui/Modal';
+import { SelectedPadInfo } from './components/palette/SelectedPadInfo';
+import { GlobalAdjustmentBox } from './components/palette/GlobalAdjustmentBox';
+import { SectionHeader } from './components/ui/SectionHeader';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
 import { applyGlobalSettings } from './utils/colorUtils';
 import { useLightshow } from './hooks/useLightshow';
+import { BackupRestore } from './components/backup/BackupRestore';
 import styles from './App.module.css';
 
 // Dynamic Preset Loader
@@ -188,6 +189,27 @@ const AppContent: React.FC = () => {
 
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<MIDIOutput | null>(null);
+  
+  // Use URL hash for routing (default to 'palette' if empty or invalid)
+  const [currentPage, setCurrentPage] = useState<'palette' | 'backup'>(() => {
+    const hash = window.location.hash.replace('#', '');
+    return (hash === 'backup') ? 'backup' : 'palette';
+  });
+
+  // Sync state to URL hash
+  useEffect(() => {
+    window.location.hash = currentPage;
+  }, [currentPage]);
+
+  // Sync URL hash to state (for back/forward buttons)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      setCurrentPage((hash === 'backup') ? 'backup' : 'palette');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   
   // Single Palette Workflow
   const [palette, setPalette] = useState<Palette>(() => ({
@@ -387,8 +409,19 @@ const AppContent: React.FC = () => {
         <header className={styles.header}>
           <div className={styles.logoContainer}>
             <img src="/favicon.ico" alt="Mystrix Palette Utility" className={styles.logo} />
-            <h1 className={styles.titleFull}>{t('title')}</h1>
-            <h1 className={styles.titleShort}>{t('titleShort')}</h1>
+            <h1>
+              <DropdownButton
+                  label={currentPage === 'palette' ? (t('tabs.palette') || "Palette") : (t('tabs.backup') || "Backup")}
+                  variant="ghost"
+                  options={[
+                    { label: (t('tabs.palette') || "Palette"), value: 'palette' as any, type: 'item' },
+                    { label: (t('tabs.backup') || "Backup"), value: 'backup' as any, type: 'item' }
+                  ]}
+                  onSelect={(val) => setCurrentPage(val as 'palette' | 'backup')}
+                  className={styles.pageTitleDropdown}
+                  dropdownPosition="bottom"
+              />
+            </h1>
           </div>
           
           <div className={styles.headerActions}>
@@ -428,15 +461,18 @@ const AppContent: React.FC = () => {
       <div className={styles.container}>
         <main className={styles.main}>
           {/* Left Column */}
-          <aside className={`${styles.leftColumn} animate-fade-in-up`} style={{ animationDelay: '0.1s' }}>
-            <div className={styles.sidebar}>
-                <MIDIConnection
-                  onDeviceConnected={handleDeviceConnected}
-                  onDeviceDisconnected={handleDeviceDisconnected}
-                  selectedDevice={selectedDevice}
-                  onDeviceSelect={handleDeviceSelect}
-                />
-            </div>
+          <aside key={`left-${currentPage}`} className={`${styles.leftColumn} animate-fade-in-up`} style={{ animationDelay: '0.1s' }}>
+            {currentPage === 'palette' && (
+              <div className={styles.sidebar}>
+                  <MIDIConnection
+                    onDeviceConnected={handleDeviceConnected}
+                    onDeviceDisconnected={handleDeviceDisconnected}
+                    selectedDevice={selectedDevice}
+                    onDeviceSelect={handleDeviceSelect}
+                  />
+              </div>
+            )}
+            {currentPage === 'palette' && (
             <div className={styles.sidebar}>
                   <SectionHeader title={t('sections.preview')} />
                   <div className={`font-size-md`}>
@@ -465,10 +501,16 @@ const AppContent: React.FC = () => {
                     </Button>
                   </div>
                 </div>
+            )}
           </aside>
 
           {/* Center Column */}
-          <div className={`${styles.centerColumn} animate-fade-in-up`} style={{ animationDelay: '0.2s' }}>
+          <div key={`center-${currentPage}`} className={`${styles.centerColumn} animate-fade-in-up`} style={{ animationDelay: '0.2s' }}>
+            {currentPage === 'backup' ? (
+                <div className={styles.workspace}>
+                    <BackupRestore />
+                </div>
+            ) : (
             <div className={styles.workspace}>
               <PaletteGrid
                 palette={effectivePalette}
@@ -536,11 +578,12 @@ const AppContent: React.FC = () => {
                 </div>
               </div>
             </div>
-
+            )}
           </div>
 
           {/* Right Column */}
-          <aside className={`${styles.rightColumn} animate-fade-in-up`} style={{ animationDelay: '0.3s' }}>
+          {currentPage === 'palette' && (
+          <aside key={`right-${currentPage}`} className={`${styles.rightColumn} animate-fade-in-up`} style={{ animationDelay: '0.3s' }}>
             <div className={styles.sidebar}>
               <SectionHeader title={t('sections.presets')} />
               <div className={styles.presetList}>
@@ -572,8 +615,9 @@ const AppContent: React.FC = () => {
               </div>
             </div>
           </aside>
+          )}
         </main>
-        <footer className={styles.footer}>
+        <footer key={`footer-${currentPage}`} className={`${styles.footer} animate-fade-in-up`} style={{ animationDelay: '0.4s' }}>
           <div className="font-size-md">{t('footer.by')}</div>
           <div className="font-size-md color-muted font-weight-normal">{t('footer.status')}</div>
         </footer>

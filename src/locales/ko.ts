@@ -1,7 +1,9 @@
 export const ko = {
   translation: {
-    title: "Mystrix 팔레트 유틸리티",
-    titleShort: "팔레트 유틸리티",
+    tabs: {
+      palette: "팔레트",
+      backup: "백업"
+    },
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "웹사이트 공사중."
@@ -10,7 +12,7 @@ export const ko = {
       device: "기기 선택",
       preview: "라이트쇼 미리보기",
       presets: "팔레트 프리셋",
-      workspace: "작업 공간"
+      backupRestore: "백업 및 복구"
     },
     buttons: {
       refresh: "새로고침",

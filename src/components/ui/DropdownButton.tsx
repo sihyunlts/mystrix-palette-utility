@@ -3,7 +3,7 @@ import { Button } from './Button';
 import styles from './DropdownButton.module.css';
 
 type DropdownOption = 
-  | { label: string; value: number; url?: never; type?: 'item' }
+  | { label: string; value: number | string; url?: never; type?: 'item' }
   | { label: string; url: string; value?: never; type?: 'item' }
   | { label: string; type: 'header'; value?: never; url?: never }
   | { type: 'divider'; label?: never; value?: never; url?: never };
@@ -11,7 +11,7 @@ type DropdownOption =
 interface DropdownButtonProps {
   label: string;
   options: DropdownOption[];
-  onSelect?: (value: number) => void;
+  onSelect?: (value: any) => void;
   disabled?: boolean;
   color?: string; // Kept for backward compat, mapped to style
   loading?: boolean;
@@ -19,6 +19,7 @@ interface DropdownButtonProps {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   dropdownPosition?: 'top' | 'bottom';
   align?: 'left' | 'right';
+  className?: string;
 }
 
 export const DropdownButton: React.FC<DropdownButtonProps> = ({
@@ -31,7 +32,8 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   loadingLabel = 'Loading...',
   variant = 'primary',
   dropdownPosition = 'top',
-  align = 'left'
+  align = 'left',
+  className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -82,7 +84,7 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   const buttonStyle = color ? { backgroundColor: color } : {};
 
   return (
-    <div className={styles.container} ref={dropdownRef}>
+    <div className={`${styles.container} ${className}`} ref={dropdownRef}>
       <Button
         onClick={() => {
             if (isOpen) {

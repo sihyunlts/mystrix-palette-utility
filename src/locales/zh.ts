@@ -1,7 +1,9 @@
 export const zh = {
   translation: {
-    title: "Mystrix 调色板工具",
-    titleShort: "调色板工具",
+    tabs: {
+      palette: "调色板",
+      backup: "备份"
+    },
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "网站建设中。"
@@ -10,7 +12,7 @@ export const zh = {
       device: "选择设备",
       preview: "灯光秀预览",
       presets: "调色板预设",
-      workspace: "Workspace"
+      backupRestore: "备份与恢复"
     },
     buttons: {
       refresh: "刷新",

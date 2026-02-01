@@ -1,7 +1,9 @@
 export const en = {
   translation: {
-    title: "Mystrix Palette Utility",
-    titleShort: "Palette Utility",
+    tabs: {
+      palette: "Palette",
+      backup: "Backup"
+    },
     footer: {
       by: "for matrixos, by sihyunlights.",
       status: "website under construction."
@@ -10,7 +12,7 @@ export const en = {
       device: "Select Device",
       preview: "Lightshow Preview",
       presets: "Palette Presets",
-      workspace: "Workspace"
+      backupRestore: "Backup & Restore"
     },
     buttons: {
       refresh: "Refresh",
