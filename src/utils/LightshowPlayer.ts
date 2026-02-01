@@ -50,15 +50,6 @@ export class LightshowPlayer {
 
   setMidi(midi: Midi) {
     this.midi = midi;
-  }
-
-  play() {
-    if (!this.midi || this.isPlaying) return;
-    this.isPlaying = true;
-    this.startTime = performance.now();
-    this.hardwareEventIndex = 0;
-    this.uiEventIndex = 0;
-
     const tracks = this.midi.tracks;
     this.events = [];
 
@@ -80,6 +71,15 @@ export class LightshowPlayer {
     });
 
     this.events.sort((a, b) => a.time - b.time);
+  }
+
+  play() {
+    if (!this.midi || this.isPlaying) return;
+    this.isPlaying = true;
+    this.startTime = performance.now();
+    this.hardwareEventIndex = 0;
+    this.uiEventIndex = 0;
+
     this.timer = requestAnimationFrame(this.tick);
   }
 
