@@ -55,7 +55,10 @@ const SETTING_NAMES: Record<number, string> = Object.fromEntries(
     SETTING_KEYS.map(key => [stringHash(key), key])
 );
  
- const stripJsonComments = (data: string) => {
+const isSystemSetting = (name: string) => name.startsWith('system_') || (!name.startsWith('system_') && !name.startsWith('device_'));
+const isDeviceSetting = (name: string) => name.startsWith('device_');
+
+const stripJsonComments = (data: string) => {
     // 1. Remove comments
     const noComments = data.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => (g ? "" : m));
     // 2. Remove trailing commas (e.g., [1, 2, 3,] or {a:1,}) which break JSON.parse
@@ -73,6 +76,11 @@ export const BackupRestore: React.FC = () => {
     const [restoreLauncher, setRestoreLauncher] = useState(true);
     const [restoreSystem, setRestoreSystem] = useState(true);
     const [restoreDevice, setRestoreDevice] = useState(true);
+    
+    // Existence flags to avoid redundant .some() checks in UI
+    const [hasLauncherData, setHasLauncherData] = useState(false);
+    const [hasSystemData, setHasSystemData] = useState(false);
+    const [hasDeviceData, setHasDeviceData] = useState(false);
 
     // Sync refs/listeners
     useEffect(() => {
@@ -125,8 +133,8 @@ export const BackupRestore: React.FC = () => {
         }
 
         // Parse Logic Reused
-        let ptr = 0;
-        const numFolders = fullData[ptr++];
+        let offset = 0;
+        const numFolders = fullData[offset++];
         const backup: BackupData = { 
             version: 0, // Placeholder
             timestamp: new Date().toISOString(), 
@@ -135,15 +143,15 @@ export const BackupRestore: React.FC = () => {
         };
 
         for (let i = 0; i < numFolders; i++) {
-            const id = fullData[ptr++];
-            const color = (fullData[ptr] << 24) | (fullData[ptr+1] << 16) | (fullData[ptr+2] << 8) | fullData[ptr+3];
-            ptr += 4;
-            const numApps = (fullData[ptr] << 8) | fullData[ptr+1];
-            ptr += 2;
+            const id = fullData[offset++];
+            const color = (fullData[offset] << 24) | (fullData[offset+1] << 16) | (fullData[offset+2] << 8) | fullData[offset+3];
+            offset += 4;
+            const numApps = (fullData[offset] << 8) | fullData[offset+1];
+            offset += 2;
             const apps: number[] = [];
             for(let j=0; j<numApps; j++) {
-                apps.push((fullData[ptr] << 24) | (fullData[ptr+1] << 16) | (fullData[ptr+2] << 8) | fullData[ptr+3]);
-                ptr += 4;
+                apps.push((fullData[offset] << 24) | (fullData[offset+1] << 16) | (fullData[offset+2] << 8) | fullData[offset+3]);
+                offset += 4;
             }
             backup.folders.push({ 
                 id, 
@@ -153,15 +161,15 @@ export const BackupRestore: React.FC = () => {
             });
         }
 
-        while (ptr < fullData.length) {
-            const header = fullData[ptr++];
+        while (offset < fullData.length) {
+            const header = fullData[offset++];
             if (header === 0xFF) { // Settings
-                const numSettings = fullData[ptr++];
+                const numSettings = fullData[offset++];
                 for (let i = 0; i < numSettings; i++) {
-                    const id = ((fullData[ptr] << 24) | (fullData[ptr + 1] << 16) | (fullData[ptr + 2] << 8) | fullData[ptr + 3]) >>> 0;
-                    ptr += 4;
-                    const len = fullData[ptr++];
-                    const dataBuffer = fullData.slice(ptr, ptr + len);
+                    const id = ((fullData[offset] << 24) | (fullData[offset + 1] << 16) | (fullData[offset + 2] << 8) | fullData[offset + 3]) >>> 0;
+                    offset += 4;
+                    const len = fullData[offset++];
+                    const dataBuffer = fullData.slice(offset, offset + len);
                     const data = Array.from(dataBuffer);
                     const setting = {
                         id,
@@ -169,16 +177,14 @@ export const BackupRestore: React.FC = () => {
                         value: (data.length === 1) ? data[0] : data
                     };
                     backup.settings?.push(setting);
-                    ptr += len;
+                    offset += len;
                 }
             } else if (header === 0xFE) { // Dict
-                 // Skip dict parsing for restore-merge purposes to save time/complexity, or parse if needed.
-                 // Just advancing pointer is enough if we know structure.
-                 const numDictApps = fullData[ptr++];
+                 const numDictApps = fullData[offset++];
                  for (let i = 0; i < numDictApps; i++) {
-                     ptr += 4; // ID
-                     const nameLen = fullData[ptr++];
-                     ptr += nameLen;
+                     offset += 4; // ID
+                     const nameLen = fullData[offset++];
+                     offset += nameLen;
                  }
             } else { break; }
         }
@@ -210,8 +216,8 @@ export const BackupRestore: React.FC = () => {
                 setStatus(`Downloading (${Math.round((s/numSections)*100)}%)...`);
             }
             
-            let ptr = 0;
-            const numFolders = fullData[ptr++];
+            let offset = 0;
+            const numFolders = fullData[offset++];
             const backup: BackupData = { 
                 version: deviceAuth.version,
                 timestamp: new Date().toISOString(), 
@@ -220,15 +226,15 @@ export const BackupRestore: React.FC = () => {
             };
 
             for (let i = 0; i < numFolders; i++) {
-                const id = fullData[ptr++];
-                const color = (fullData[ptr] << 24) | (fullData[ptr+1] << 16) | (fullData[ptr+2] << 8) | fullData[ptr+3];
-                ptr += 4;
-                const numApps = (fullData[ptr] << 8) | fullData[ptr+1];
-                ptr += 2;
+                const id = fullData[offset++];
+                const color = (fullData[offset] << 24) | (fullData[offset+1] << 16) | (fullData[offset+2] << 8) | fullData[offset+3];
+                offset += 4;
+                const numApps = (fullData[offset] << 8) | fullData[offset+1];
+                offset += 2;
                 const apps: number[] = [];
                 for(let j=0; j<numApps; j++) {
-                    apps.push((fullData[ptr] << 24) | (fullData[ptr+1] << 16) | (fullData[ptr+2] << 8) | fullData[ptr+3]);
-                    ptr += 4;
+                    apps.push((fullData[offset] << 24) | (fullData[offset+1] << 16) | (fullData[offset+2] << 8) | fullData[offset+3]);
+                    offset += 4;
                 }
                 backup.folders.push({ 
                     id, 
@@ -240,15 +246,15 @@ export const BackupRestore: React.FC = () => {
 
             const appLookup: Record<number, string> = {};
 
-            while (ptr < fullData.length) {
-                const header = fullData[ptr++];
+            while (offset < fullData.length) {
+                const header = fullData[offset++];
                 if (header === 0xFF) {
-                    const numSettings = fullData[ptr++];
+                    const numSettings = fullData[offset++];
                     for (let i = 0; i < numSettings; i++) {
-                        const id = ((fullData[ptr] << 24) | (fullData[ptr + 1] << 16) | (fullData[ptr + 2] << 8) | fullData[ptr + 3]) >>> 0;
-                        ptr += 4;
-                        const len = fullData[ptr++];
-                        const dataBuffer = fullData.slice(ptr, ptr + len);
+                        const id = ((fullData[offset] << 24) | (fullData[offset + 1] << 16) | (fullData[offset + 2] << 8) | fullData[offset + 3]) >>> 0;
+                        offset += 4;
+                        const len = fullData[offset++];
+                        const dataBuffer = fullData.slice(offset, offset + len);
                         const data = Array.from(dataBuffer);
 
                         const setting = {
@@ -258,17 +264,17 @@ export const BackupRestore: React.FC = () => {
                         };
 
                         backup.settings?.push(setting);
-                        ptr += len;
+                        offset += len;
                     }
                 } else if (header === 0xFE) {
-                    const numDictApps = fullData[ptr++];
+                    const numDictApps = fullData[offset++];
                     for (let i = 0; i < numDictApps; i++) {
-                        const id = ((fullData[ptr] << 24) | (fullData[ptr + 1] << 16) | (fullData[ptr + 2] << 8) | fullData[ptr + 3]) | 0;
-                        ptr += 4;
-                        const nameLen = fullData[ptr++];
-                        const name = new TextDecoder().decode(fullData.slice(ptr, ptr + nameLen));
+                        const id = ((fullData[offset] << 24) | (fullData[offset + 1] << 16) | (fullData[offset + 2] << 8) | fullData[offset + 3]) | 0;
+                        offset += 4;
+                        const nameLen = fullData[offset++];
+                        const name = new TextDecoder().decode(fullData.slice(offset, offset + nameLen));
                         appLookup[id] = name;
-                        ptr += nameLen;
+                        offset += nameLen;
                     }
                 } else {
                     break; 
@@ -293,13 +299,13 @@ export const BackupRestore: React.FC = () => {
 
             const blob = new Blob([header + jsonString], { type: "application/jsonc" });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `matrixos-backup-${new Date().toISOString().split('T')[0]}.jsonc`;
-            a.click();
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `matrixos-backup-${new Date().toISOString().split('T')[0]}.jsonc`;
+            downloadLink.click();
             await hid.sendCommand(BackupCommand.ACK, [], true);
             setStatus("Backup Complete");
-        } catch (e: any) { setStatus("Backup Failed: " + e.message); }
+        } catch (error: any) { setStatus("Backup Failed: " + error.message); }
     };
 
     const handleFileSelect = () => {
@@ -313,13 +319,14 @@ export const BackupRestore: React.FC = () => {
             try {
                 const cleanJson = stripJsonComments(text);
                 const backup: BackupData = JSON.parse(cleanJson);
-                const hasLauncher = (backup.folders?.length ?? 0) > 0;
-                const hasSystem = backup.settings?.some(s => (s.name || "").startsWith('system_') || (!(s.name || "").startsWith('system_') && !(s.name || "").startsWith('device_'))) || false;
-                const hasDevice = backup.settings?.some(s => (s.name || "").startsWith('device_')) || false;
+                const isLauncherAvailable = (backup.folders?.length ?? 0) > 0;
+                const isSystemAvailable = backup.settings?.some(setting => isSystemSetting(setting.name || "")) ?? false;
+                const isDeviceAvailable = backup.settings?.some(setting => isDeviceSetting(setting.name || "")) ?? false;
 
-                setRestoreLauncher(hasLauncher);
-                setRestoreSystem(hasSystem);
-                setRestoreDevice(hasDevice);
+                setHasLauncherData(isLauncherAvailable); setRestoreLauncher(isLauncherAvailable);
+                setHasSystemData(isSystemAvailable); setRestoreSystem(isSystemAvailable);
+                setHasDeviceData(isDeviceAvailable); setRestoreDevice(isDeviceAvailable);
+                
                 setPendingBackup(backup);
                 setStatus(`Loaded backup file. Select items to restore.`);
             } catch (err: any) { setStatus("Load Failed: " + err.message); }
@@ -345,46 +352,40 @@ export const BackupRestore: React.FC = () => {
             const currentDeviceData = await fetchDeviceBackup();
             const foldersToRestore = restoreLauncher ? pendingBackup.folders : currentDeviceData.folders;
             const finalSettingsMap = new Map<number, any>();
-            currentDeviceData.settings?.forEach(s => finalSettingsMap.set(s.id, s));
+            currentDeviceData.settings?.forEach(setting => finalSettingsMap.set(setting.id, setting));
 
-            pendingBackup.settings?.forEach(s => {
-                const name = s.name || "";
+            pendingBackup.settings?.forEach(setting => {
+                const name = setting.name || "";
                 let shouldRestore = false;
 
-                if (name.startsWith('system_')) {
-                    shouldRestore = restoreSystem;
-                } else if (name.startsWith('device_')) {
-                    shouldRestore = restoreDevice;
-                } else {
-                    // Default fallback for unknown setting prefixes
-                    shouldRestore = restoreSystem;
-                }
+                if (isSystemSetting(name)) shouldRestore = restoreSystem;
+                else if (isDeviceSetting(name)) shouldRestore = restoreDevice;
 
                 if (shouldRestore) {
-                    finalSettingsMap.set(s.id, s);
+                    finalSettingsMap.set(setting.id, setting);
                 }
             });
 
             const settingsToRestore = Array.from(finalSettingsMap.values());
 
             const payload: number[] = [foldersToRestore.length];
-            foldersToRestore.forEach(f => {
+            foldersToRestore.forEach(folder => {
                 let colorInt = 0;
-                if(typeof f.color === 'string' && f.color.startsWith('#')){
-                     colorInt = parseInt(f.color.replace('#', ''), 16);
+                if(typeof folder.color === 'string' && folder.color.startsWith('#')){
+                     colorInt = parseInt(folder.color.replace('#', ''), 16);
                 } else {
-                     colorInt = Number(f.color) || 0;
+                     colorInt = Number(folder.color) || 0;
                 }
                 
-                payload.push(f.id, (colorInt >> 24) & 0xFF, (colorInt >> 16) & 0xFF, (colorInt >> 8) & 0xFF, colorInt & 0xFF, f.apps.length >> 8, f.apps.length & 0xFF);
-                f.apps.forEach(app => payload.push((app >> 24) & 0xFF, (app >> 16) & 0xFF, (app >> 8) & 0xFF, app & 0xFF));
+                payload.push(folder.id, (colorInt >> 24) & 0xFF, (colorInt >> 16) & 0xFF, (colorInt >> 8) & 0xFF, colorInt & 0xFF, folder.apps.length >> 8, folder.apps.length & 0xFF);
+                folder.apps.forEach(app => payload.push((app >> 24) & 0xFF, (app >> 16) & 0xFF, (app >> 8) & 0xFF, app & 0xFF));
             });
 
             if (settingsToRestore.length > 0) {
                 payload.push(0xFF, settingsToRestore.length);
-                settingsToRestore.forEach(s => {
-                    const finalData = Array.isArray(s.value) ? s.value : [Number(s.value)];
-                    payload.push((s.id >> 24) & 0xFF, (s.id >> 16) & 0xFF, (s.id >> 8) & 0xFF, s.id & 0xFF);
+                settingsToRestore.forEach(setting => {
+                    const finalData = Array.isArray(setting.value) ? setting.value : [Number(setting.value)];
+                    payload.push((setting.id >> 24) & 0xFF, (setting.id >> 16) & 0xFF, (setting.id >> 8) & 0xFF, setting.id & 0xFF);
                     payload.push(finalData.length, ...finalData);
                 });
             }
@@ -428,7 +429,7 @@ export const BackupRestore: React.FC = () => {
 
                     <div className={backupStyles.scrollArea}>
                         <div className={backupStyles.group}>
-                            {pendingBackup.folders?.length > 0 && (
+                            {hasLauncherData && (
                                 <label className={backupStyles.item}>
                                     <input 
                                         type="checkbox" 
@@ -442,7 +443,7 @@ export const BackupRestore: React.FC = () => {
                                 </label>
                             )}
                             
-                            {pendingBackup.settings?.some(s => (s.name || "").startsWith('system_') || (!(s.name || "").startsWith('system_') && !(s.name || "").startsWith('device_'))) && (
+                            {hasSystemData && (
                                 <label className={backupStyles.item}>
                                     <input 
                                         type="checkbox" 
@@ -456,7 +457,7 @@ export const BackupRestore: React.FC = () => {
                                 </label>
                             )}
 
-                            {pendingBackup.settings?.some(s => (s.name || "").startsWith('device_')) && (
+                            {hasDeviceData && (
                                 <label className={backupStyles.item}>
                                     <input 
                                         type="checkbox" 
