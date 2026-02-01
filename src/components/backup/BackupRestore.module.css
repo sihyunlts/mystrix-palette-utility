@@ -1,7 +1,6 @@
 .container {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-xl);
     gap: var(--spacing-xl);
     width: 100%;
 }
@@ -22,56 +21,15 @@
 .selectionContainer {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     margin-top: var(--spacing-lg);
     border-top: 1px solid var(--color-border);
     padding-top: var(--spacing-lg);
-    animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.selectionHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.selectionHeader h3 {
+.selectionContainer h3 {
     margin: 0;
     font-size: var(--font-size-lg);
-    font-weight: 600;
-}
-
-.selectionActions {
-    display: flex;
-    gap: var(--spacing-sm);
-}
-
-.scrollArea {
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-subtle);
-    padding: var(--spacing-md);
-    background: var(--color-bg-subtle);
-}
-
-.group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    margin-bottom: var(--spacing-lg);
-}
-
-.group h4 {
-    margin: 0 0 var(--spacing-xs) 0;
-    font-size: var(--font-size-sm);
-    text-transform: uppercase;
-    color: var(--color-text-subtle);
     font-weight: 600;
 }
 
@@ -82,7 +40,6 @@
     padding: var(--spacing-sm);
     border-radius: var(--radius-subtle);
     cursor: pointer;
-    transition: background 0.15s;
 }
 
 .item:hover {
@@ -93,13 +50,6 @@
     width: 16px;
     height: 16px;
     accent-color: var(--color-primary);
-}
-
-.colorDot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.2);
 }
 
 .confirmActions {

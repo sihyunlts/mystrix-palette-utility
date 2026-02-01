@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
-import { SectionHeader } from '../ui/SectionHeader';
 import { HIDConnection, BackupCommand } from '../../utils/hid';
 import backupStyles from './BackupRestore.module.css';
 
@@ -62,11 +61,19 @@ const stripJsonComments = (data: string) => {
     return data.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (match, group) => (group ? "" : match));
 };
 
-export const BackupRestore: React.FC = () => {
+interface BackupRestoreProps {
+    hidInstance: HIDConnection;
+    connected: boolean;
+    connectedDevice: any | null;
+}
+
+export const BackupRestore: React.FC<BackupRestoreProps> = ({ 
+    hidInstance, 
+    connected, 
+    connectedDevice 
+}) => {
     const { t } = useTranslation();
     const [status, setStatus] = useState<string>("Disconnected");
-    const [hid, setHid] = useState<HIDConnection | null>(null);
-    const [connected, setConnected] = useState(false);
     
     // Selective Restore State
     const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null);
@@ -79,21 +86,19 @@ export const BackupRestore: React.FC = () => {
     const [hasSystemData, setHasSystemData] = useState(false);
     const [hasDeviceData, setHasDeviceData] = useState(false);
 
-    // Sync refs/listeners
+    // Sync status with connection state
     useEffect(() => {
-        const conn = new HIDConnection();
-        setHid(conn);
-
-        conn.onDisconnect(() => {
-            setConnected(false);
-            setStatus("Disconnected (Device Removed)");
-        });
-    }, []);
+        if (connected && connectedDevice) {
+            setStatus(`Connected to ${connectedDevice.productName}`);
+        } else {
+            setStatus("Disconnected");
+        }
+    }, [connected, connectedDevice]);
 
     const verifyApp = async () => {
-        if (!hid) return { success: false, version: 0 };
+        if (!hidInstance) return { success: false, version: 0 };
         try {
-            const signature = await hid.requestData(BackupCommand.IDENTIFY);
+            const signature = await hidInstance.requestData(BackupCommand.IDENTIFY);
             const version = signature[1]; // Use first byte as single version
             const sigText = new TextDecoder().decode(signature.slice(3, 9)); 
             if (sigText.startsWith("BACKUP")) return { success: true, version };
@@ -101,28 +106,18 @@ export const BackupRestore: React.FC = () => {
         return { success: false, version: 0 };
     };
 
-    const handleConnect = async () => {
-        if (!hid) return;
-        try {
-            const device = await hid.connect();
-            if (device) { setConnected(true); setStatus(`Connected to ${device.productName}`); }
-        } catch (e: any) { setStatus("Connection failed: " + e.message); }
-    };
-
-
-
     const fetchDeviceBackup = async (): Promise<BackupData> => {
-        if (!hid) throw new Error("Device not connected");
+        if (!hidInstance) throw new Error("Device not connected");
         
         setStatus("Reading current device state...");
-        const info = await hid.requestData(BackupCommand.INFO);
+        const info = await hidInstance.requestData(BackupCommand.INFO);
         const totalSize = (info[1] << 24) | (info[2] << 16) | (info[3] << 8) | info[4];
         
         const fullData = new Uint8Array(totalSize);
         const numSections = Math.ceil(totalSize / MAX_TRANSFER_SIZE);
         
         for (let s = 0; s < numSections; s++) {
-            const chunkWithHeader = await hid.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF]);
+            const chunkWithHeader = await hidInstance.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF]);
             const actualSize = chunkWithHeader[3];
             const data = chunkWithHeader.slice(4, 4 + actualSize);
             fullData.set(data, s * MAX_TRANSFER_SIZE);
@@ -189,7 +184,7 @@ export const BackupRestore: React.FC = () => {
     };
 
     const handleBackup = async () => {
-        if (!hid || !connected) return;
+        if (!hidInstance || !connected) return;
         
         const deviceAuth = await verifyApp();
         if (!deviceAuth.success) {
@@ -199,14 +194,14 @@ export const BackupRestore: React.FC = () => {
 
         try {
             setStatus("Preparing backup...");
-            const info = await hid.requestData(BackupCommand.INFO);
+            const info = await hidInstance.requestData(BackupCommand.INFO);
             const totalSize = (info[1] << 24) | (info[2] << 16) | (info[3] << 8) | info[4];
             
             const fullData = new Uint8Array(totalSize);
             const numSections = Math.ceil(totalSize / MAX_TRANSFER_SIZE);
             
             for (let s = 0; s < numSections; s++) {
-                const chunkWithHeader = await hid.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF]);
+                const chunkWithHeader = await hidInstance.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF]);
                 const actualSize = chunkWithHeader[3];
                 const data = chunkWithHeader.slice(4, 4 + actualSize);
                 fullData.set(data, s * MAX_TRANSFER_SIZE);
@@ -300,7 +295,7 @@ export const BackupRestore: React.FC = () => {
             downloadLink.href = url;
             downloadLink.download = `matrixos-backup-${new Date().toISOString().split('T')[0]}.jsonc`;
             downloadLink.click();
-            await hid.sendCommand(BackupCommand.ACK, [], true);
+            await hidInstance.sendCommand(BackupCommand.ACK, [], true);
             setStatus("Backup Complete");
         } catch (error: any) { setStatus("Backup Failed: " + error.message); }
     };
@@ -332,7 +327,7 @@ export const BackupRestore: React.FC = () => {
     };
 
     const executeRestore = async () => {
-        if (!hid || !connected || !pendingBackup) return;
+        if (!hidInstance || !connected || !pendingBackup) return;
 
         const deviceAuth = await verifyApp();
         if (!deviceAuth.success) {
@@ -388,16 +383,16 @@ export const BackupRestore: React.FC = () => {
             }
             
             const totalSize = payload.length;
-            await hid.requestData(BackupCommand.INFO, [(totalSize >> 24) & 0xFF, (totalSize >> 16) & 0xFF, (totalSize >> 8) & 0xFF, totalSize & 0xFF], true);
+            await hidInstance.requestData(BackupCommand.INFO, [(totalSize >> 24) & 0xFF, (totalSize >> 16) & 0xFF, (totalSize >> 8) & 0xFF, totalSize & 0xFF], true);
             
             const numSections = Math.ceil(totalSize / MAX_TRANSFER_SIZE);
             for (let s = 0; s < numSections; s++) {
                 const chunk = payload.slice(s * MAX_TRANSFER_SIZE, (s + 1) * MAX_TRANSFER_SIZE);
-                await hid.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF, chunk.length, ...chunk], true);
+                await hidInstance.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF, chunk.length, ...chunk], true);
                 setStatus(`Uploading (${Math.round((s/numSections)*100)}%)...`);
             }
             
-            await hid.requestData(BackupCommand.COMMIT, [], true);
+            await hidInstance.requestData(BackupCommand.COMMIT, [], true);
             setStatus("Restore Complete!");
             setPendingBackup(null);
         } catch (err: any) { setStatus("Restore Failed: " + err.message); }
@@ -405,12 +400,9 @@ export const BackupRestore: React.FC = () => {
     
     return (
         <div className={backupStyles.container}>
-            <SectionHeader title={t('sections.backupRestore') || "Backup & Restore"} />
             <div className={backupStyles.status}>Status: <strong>{status}</strong></div>
             <div className={backupStyles.actions}>
-                {!connected ? (
-                    <Button variant="primary" onClick={handleConnect}>Connect Device</Button>
-                ) : (
+                {connected && (
                     <>
                         <Button variant="secondary" onClick={handleBackup}>Backup to File</Button>
                         {!pendingBackup && <Button variant="danger" onClick={handleFileSelect}>Restore from File</Button>}
@@ -420,55 +412,49 @@ export const BackupRestore: React.FC = () => {
             
             {pendingBackup && (
                 <div className={backupStyles.selectionContainer}>
-                    <div className={backupStyles.selectionHeader}>
-                        <h3>Select Data to Restore</h3>
-                    </div>
+                    <h3>Select Data to Restore</h3>
 
-                    <div className={backupStyles.scrollArea}>
-                        <div className={backupStyles.group}>
-                            {hasLauncherData && (
-                                <label className={backupStyles.item}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={restoreLauncher}
-                                        onChange={(e) => setRestoreLauncher(e.target.checked)}
-                                    />
-                                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                                        <span style={{fontWeight: 600}}>App Launcher</span>
-                                        <span className="font-size-sm color-muted">Folders, App Layout, Folder Colors</span>
-                                    </div>
-                                </label>
-                            )}
-                            
-                            {hasSystemData && (
-                                <label className={backupStyles.item}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={restoreSystem}
-                                        onChange={(e) => setRestoreSystem(e.target.checked)}
-                                    />
-                                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                                        <span style={{fontWeight: 600}}>System Settings</span>
-                                        <span className="font-size-sm color-muted">Brightness, Secret Menu, Global configs</span>
-                                    </div>
-                                </label>
-                            )}
+                    {hasLauncherData && (
+                        <label className={backupStyles.item}>
+                            <input 
+                                type="checkbox" 
+                                checked={restoreLauncher}
+                                onChange={(e) => setRestoreLauncher(e.target.checked)}
+                            />
+                            <div style={{display: 'flex', flexDirection: 'column'}}>
+                                <span style={{fontWeight: 600}}>App Launcher</span>
+                                <span className="font-size-sm color-muted">Folders, App Order</span>
+                            </div>
+                        </label>
+                    )}
+                    
+                    {hasSystemData && (
+                        <label className={backupStyles.item}>
+                            <input 
+                                type="checkbox" 
+                                checked={restoreSystem}
+                                onChange={(e) => setRestoreSystem(e.target.checked)}
+                            />
+                            <div style={{display: 'flex', flexDirection: 'column'}}>
+                                <span style={{fontWeight: 600}}>System Settings</span>
+                                <span className="font-size-sm color-muted">Global configs (Brightness)</span>
+                            </div>
+                        </label>
+                    )}
 
-                            {hasDeviceData && (
-                                <label className={backupStyles.item}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={restoreDevice}
-                                        onChange={(e) => setRestoreDevice(e.target.checked)}
-                                    />
-                                    <div style={{display: 'flex', flexDirection: 'column'}}>
-                                        <span style={{fontWeight: 600}}>Device Settings</span>
-                                        <span className="font-size-sm color-muted">Touchbar, Bluetooth, Device-specific configs</span>
-                                    </div>
-                                </label>
-                            )}
-                        </div>
-                    </div>
+                    {hasDeviceData && (
+                        <label className={backupStyles.item}>
+                            <input 
+                                type="checkbox" 
+                                checked={restoreDevice}
+                                onChange={(e) => setRestoreDevice(e.target.checked)}
+                            />
+                            <div style={{display: 'flex', flexDirection: 'column'}}>
+                                <span style={{fontWeight: 600}}>Device Settings</span>
+                                <span className="font-size-sm color-muted">Device-specific configs (Touchbar, Bluetooth)</span>
+                            </div>
+                        </label>
+                    )}
 
                     <div className={backupStyles.confirmActions}>
                          <Button variant="ghost" onClick={() => setPendingBackup(null)}>Cancel</Button>

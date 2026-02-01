@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MIDIManager } from '../../utils/midi';
-import { SectionHeader } from '../ui/SectionHeader';
-import styles from './MIDIConnection.module.css';
+import { ConnectionUI, DeviceItem } from '../ui/ConnectionUI';
 
 interface MIDIConnectionProps {
   onDeviceConnected: (device: MIDIOutput) => void;
@@ -10,29 +9,6 @@ interface MIDIConnectionProps {
   selectedDevice: MIDIOutput | null;
   onDeviceSelect: (device: MIDIOutput | null) => void;
 }
-
-const DeviceButton: React.FC<{
-    device: MIDIOutput, 
-    index: number,
-    isConnected?: boolean,
-    onClick: () => void 
-}> = ({ device, index, isConnected = false, onClick }) => {
-    const className = isConnected ? styles.connectedDevice : styles.deviceButton;
-    
-    return (
-        <button
-            onClick={onClick}
-            className={className}
-        >
-            <span className={`font-size-md color-main font-weight-medium ${isConnected ? 'color-positive font-weight-bold' : ''}`}>
-                {device.name}
-            </span>
-            <span className="font-size-sm">
-                {device.manufacturer}
-            </span>
-        </button>
-    );
-};
 
 export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
   onDeviceConnected,
@@ -127,7 +103,7 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     });
 
     return () => removeListener();
-  }, [initializeMIDI, handleDeviceSelect, midiManager, t]); // Updated dependencies
+  }, [initializeMIDI, handleDeviceSelect, midiManager, t]);
 
   const handleRefresh = React.useCallback(() => {
     setIsConnected(false);
@@ -137,67 +113,35 @@ export const MIDIConnection: React.FC<MIDIConnectionProps> = ({
     initializeMIDI(false);
   }, [onDeviceSelect, initializeMIDI]);
 
-  if (isLoading) {
-    return (
-      <div className={`${styles.loadingBox} font-size-md`}>
-        <div>{t('messages.initializing')}</div>
-      </div>
-    );
-  }
-
-  if (isConnected) {
-    const deviceIndex = availableDevices.findIndex(d => (d as any).id === (selectedDevice as any)?.id);
-    
-    return (
-      <div className={styles.container}>
-        <SectionHeader 
-          title={t('sections.device')}
-          buttonText={t('buttons.disconnect')}
-          onButtonClick={handleRefresh} 
-          icon="link-slash"
-        />
-        
-        {selectedDevice && (
-          <DeviceButton
-            device={selectedDevice}
-            index={deviceIndex !== -1 ? deviceIndex : 0}
-            isConnected={true}
-            onClick={handleRefresh}
-          />
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.container}>
-      <SectionHeader 
-        title={t('sections.device')}
-        buttonText={t('buttons.refresh')}
-        onButtonClick={handleRefresh} 
-        icon="rotate"
-      />
-
-      {error ? (
-        <div className={styles.errorBox}>
-          <span className='font-size-md color-negative'>{error}</span>
-        </div>
+    <ConnectionUI
+      title={t('sections.device')}
+      headerButtonText={isConnected ? t('buttons.disconnect') : t('buttons.refresh')}
+      onHeaderButtonClick={handleRefresh}
+      headerIcon={isConnected ? "link-slash" : "rotate"}
+      isLoading={isLoading}
+      loadingMessage={t('messages.initializing')}
+      error={error}
+      emptyMessage={t('messages.noDevices')}
+    >
+      {isConnected && selectedDevice ? (
+        <DeviceItem
+          name={selectedDevice.name || 'Unknown Device'}
+          manufacturer={selectedDevice.manufacturer}
+          isConnected={true}
+          onClick={handleRefresh}
+        />
       ) : (
-        <div className={styles.deviceList}>
-            {availableDevices.length > 0 ? availableDevices.map((device, index) => (
-                <DeviceButton
-                    key={index}
-                    index={index}
-                    device={device}
-                    onClick={() => handleDeviceSelect(device)}
-                />
-            )) : (
-                <div className={`${styles.emptyState} font-size-md`}>
-                    {t('messages.noDevices')}
-                </div>
-            )}
-        </div>
+        availableDevices.map((device, index) => (
+          <DeviceItem
+            key={(device as any).id || index}
+            name={device.name || 'Unknown Device'}
+            manufacturer={device.manufacturer}
+            onClick={() => handleDeviceSelect(device)}
+          />
+        ))
       )}
-    </div>
+    </ConnectionUI>
   );
 };
+

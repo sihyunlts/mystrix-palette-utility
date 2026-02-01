@@ -49,6 +49,10 @@
   align-items: start;
 }
 
+.backupLayout {
+  grid-template-columns: minmax(260px, 320px) 1fr;
+}
+
 .leftColumn,
 .rightColumn {
   display: flex;

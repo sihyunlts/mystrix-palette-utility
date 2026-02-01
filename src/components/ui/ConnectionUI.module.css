@@ -1,12 +1,9 @@
-/* MIDIConnection Component Styles */
-
 .container {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
 }
 
-/* Base style for device items (shared between button and connected display) */
 .deviceButton,
 .connectedDevice {
   display: flex;
@@ -22,10 +19,6 @@
 
 .deviceButton {
   cursor: pointer;
-}
-
-.deviceButton :global(.text-main) {
-  color: var(--color-text-main);
 }
 
 .connectedDevice {

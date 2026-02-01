@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next';
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
-import { MIDIConnection } from './components/midi/MIDIConnection';
+import { MIDIConnection } from './components/palette/MIDIConnection';
 import { PaletteGrid } from './components/palette/MystrixPreview';
 import { DropdownButton } from './components/ui/DropdownButton';
 import { Button } from './components/ui/Button';
@@ -14,6 +14,8 @@ import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './util
 import { applyGlobalSettings } from './utils/colorUtils';
 import { useLightshow } from './hooks/useLightshow';
 import { BackupRestore } from './components/backup/BackupRestore';
+import { HIDConnection as HIDManager } from './utils/hid';
+import { HIDConnection } from './components/backup/HIDConnection';
 import styles from './App.module.css';
 
 // Dynamic Preset Loader
@@ -219,6 +221,17 @@ const AppContent: React.FC = () => {
     available: true
   }));
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | undefined>(undefined);
+  
+  // HID Connection State (for Backup)
+  const hidInstance = useMemo(() => new HIDManager(), []);
+  const [hidDevice, setHidDevice] = useState<any | null>(null);
+  const hidConnected = !!hidDevice;
+
+  useEffect(() => {
+    hidInstance.onDisconnect(() => {
+      setHidDevice(null);
+    });
+  }, [hidInstance]);
 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -459,16 +472,25 @@ const AppContent: React.FC = () => {
           </div>
         </header>
       <div className={styles.container}>
-        <main className={styles.main}>
+        <main className={`${styles.main} ${currentPage === 'backup' ? styles.backupLayout : ''}`}>
           {/* Left Column */}
           <aside key={`left-${currentPage}`} className={`${styles.leftColumn} animate-fade-in-up`} style={{ animationDelay: '0.1s' }}>
-            {currentPage === 'palette' && (
+            {currentPage === 'palette' ? (
               <div className={styles.sidebar}>
                   <MIDIConnection
                     onDeviceConnected={handleDeviceConnected}
                     onDeviceDisconnected={handleDeviceDisconnected}
                     selectedDevice={selectedDevice}
                     onDeviceSelect={handleDeviceSelect}
+                  />
+              </div>
+            ) : (
+              <div className={styles.sidebar}>
+                  <HIDConnection
+                    onConnected={setHidDevice}
+                    onDisconnected={() => setHidDevice(null)}
+                    connectedDevice={hidDevice}
+                    hidInstance={hidInstance}
                   />
               </div>
             )}
@@ -508,7 +530,11 @@ const AppContent: React.FC = () => {
           <div key={`center-${currentPage}`} className={`${styles.centerColumn} animate-fade-in-up`} style={{ animationDelay: '0.2s' }}>
             {currentPage === 'backup' ? (
                 <div className={styles.workspace}>
-                    <BackupRestore />
+                    <BackupRestore 
+                      hidInstance={hidInstance}
+                      connected={hidConnected}
+                      connectedDevice={hidDevice}
+                    />
                 </div>
             ) : (
             <div className={styles.workspace}>
