@@ -313,9 +313,13 @@ export const BackupRestore: React.FC = () => {
             try {
                 const cleanJson = stripJsonComments(text);
                 const backup: BackupData = JSON.parse(cleanJson);
-                setRestoreLauncher(true);
-                setRestoreSystem(true);
-                setRestoreDevice(true);
+                const hasLauncher = (backup.folders?.length ?? 0) > 0;
+                const hasSystem = backup.settings?.some(s => (s.name || "").startsWith('system_') || (!(s.name || "").startsWith('system_') && !(s.name || "").startsWith('device_'))) || false;
+                const hasDevice = backup.settings?.some(s => (s.name || "").startsWith('device_')) || false;
+
+                setRestoreLauncher(hasLauncher);
+                setRestoreSystem(hasSystem);
+                setRestoreDevice(hasDevice);
                 setPendingBackup(backup);
                 setStatus(`Loaded backup file. Select items to restore.`);
             } catch (err: any) { setStatus("Load Failed: " + err.message); }
@@ -343,19 +347,23 @@ export const BackupRestore: React.FC = () => {
             const finalSettingsMap = new Map<number, any>();
             currentDeviceData.settings?.forEach(s => finalSettingsMap.set(s.id, s));
 
-            if (pendingBackup.settings) {
-                pendingBackup.settings.forEach(s => {
-                    const name = s.name || "";
-                    let shouldRestore = false;
-                    if (name.startsWith('system_') && restoreSystem) shouldRestore = true;
-                    else if (name.startsWith('device_') && restoreDevice) shouldRestore = true;
-                    else if (!name.startsWith('system_') && !name.startsWith('device_') && restoreSystem) shouldRestore = true;
+            pendingBackup.settings?.forEach(s => {
+                const name = s.name || "";
+                let shouldRestore = false;
 
-                    if (shouldRestore) {
-                        finalSettingsMap.set(s.id, s);
-                    }
-                });
-            }
+                if (name.startsWith('system_')) {
+                    shouldRestore = restoreSystem;
+                } else if (name.startsWith('device_')) {
+                    shouldRestore = restoreDevice;
+                } else {
+                    // Default fallback for unknown setting prefixes
+                    shouldRestore = restoreSystem;
+                }
+
+                if (shouldRestore) {
+                    finalSettingsMap.set(s.id, s);
+                }
+            });
 
             const settingsToRestore = Array.from(finalSettingsMap.values());
 
@@ -420,41 +428,47 @@ export const BackupRestore: React.FC = () => {
 
                     <div className={backupStyles.scrollArea}>
                         <div className={backupStyles.group}>
-                            <label className={backupStyles.item}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={restoreLauncher}
-                                    onChange={(e) => setRestoreLauncher(e.target.checked)}
-                                />
-                                <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <span style={{fontWeight: 600}}>App Launcher</span>
-                                    <span className="font-size-sm color-muted">Folders, App Layout, Folder Colors</span>
-                                </div>
-                            </label>
+                            {pendingBackup.folders?.length > 0 && (
+                                <label className={backupStyles.item}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={restoreLauncher}
+                                        onChange={(e) => setRestoreLauncher(e.target.checked)}
+                                    />
+                                    <div style={{display: 'flex', flexDirection: 'column'}}>
+                                        <span style={{fontWeight: 600}}>App Launcher</span>
+                                        <span className="font-size-sm color-muted">Folders, App Layout, Folder Colors</span>
+                                    </div>
+                                </label>
+                            )}
                             
-                            <label className={backupStyles.item}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={restoreSystem}
-                                    onChange={(e) => setRestoreSystem(e.target.checked)}
-                                />
-                                <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <span style={{fontWeight: 600}}>System Settings</span>
-                                    <span className="font-size-sm color-muted">Brightness, Secret Menu, Global configs</span>
-                                </div>
-                            </label>
+                            {pendingBackup.settings?.some(s => (s.name || "").startsWith('system_') || (!(s.name || "").startsWith('system_') && !(s.name || "").startsWith('device_'))) && (
+                                <label className={backupStyles.item}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={restoreSystem}
+                                        onChange={(e) => setRestoreSystem(e.target.checked)}
+                                    />
+                                    <div style={{display: 'flex', flexDirection: 'column'}}>
+                                        <span style={{fontWeight: 600}}>System Settings</span>
+                                        <span className="font-size-sm color-muted">Brightness, Secret Menu, Global configs</span>
+                                    </div>
+                                </label>
+                            )}
 
-                            <label className={backupStyles.item}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={restoreDevice}
-                                    onChange={(e) => setRestoreDevice(e.target.checked)}
-                                />
-                                <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <span style={{fontWeight: 600}}>Device Settings</span>
-                                    <span className="font-size-sm color-muted">Touchbar, Bluetooth, Device-specific configs</span>
-                                </div>
-                            </label>
+                            {pendingBackup.settings?.some(s => (s.name || "").startsWith('device_')) && (
+                                <label className={backupStyles.item}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={restoreDevice}
+                                        onChange={(e) => setRestoreDevice(e.target.checked)}
+                                    />
+                                    <div style={{display: 'flex', flexDirection: 'column'}}>
+                                        <span style={{fontWeight: 600}}>Device Settings</span>
+                                        <span className="font-size-sm color-muted">Touchbar, Bluetooth, Device-specific configs</span>
+                                    </div>
+                                </label>
+                            )}
                         </div>
                     </div>
 
