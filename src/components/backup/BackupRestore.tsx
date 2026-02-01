@@ -421,9 +421,9 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 checked={restoreLauncher}
                                 onChange={(e) => setRestoreLauncher(e.target.checked)}
                             />
-                            <div style={{display: 'flex', flexDirection: 'column'}}>
-                                <span style={{fontWeight: 600}}>App Launcher</span>
-                                <span className="font-size-sm color-muted">Folders, App Order</span>
+                            <div className={backupStyles.itemInfo}>
+                                <span className='font-size-md color-main'>App Launcher</span>
+                                <span className="font-size-sm color-dim">Folders, App Order</span>
                             </div>
                         </label>
                     )}
@@ -435,9 +435,9 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 checked={restoreSystem}
                                 onChange={(e) => setRestoreSystem(e.target.checked)}
                             />
-                            <div style={{display: 'flex', flexDirection: 'column'}}>
-                                <span style={{fontWeight: 600}}>System Settings</span>
-                                <span className="font-size-sm color-muted">Global configs (Brightness)</span>
+                            <div className={backupStyles.itemInfo}>
+                                <span className='font-size-md color-main'>System Settings</span>
+                                <span className="font-size-sm color-dim">Global configs (Brightness)</span>
                             </div>
                         </label>
                     )}
@@ -449,9 +449,9 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 checked={restoreDevice}
                                 onChange={(e) => setRestoreDevice(e.target.checked)}
                             />
-                            <div style={{display: 'flex', flexDirection: 'column'}}>
-                                <span style={{fontWeight: 600}}>Device Settings</span>
-                                <span className="font-size-sm color-muted">Device-specific configs (Touchbar, Bluetooth)</span>
+                            <div className={backupStyles.itemInfo}>
+                                <span className='font-size-md color-main'>Device Settings</span>
+                                <span className="font-size-sm color-dim">Device-specific configs (Touchbar, Bluetooth)</span>
                             </div>
                         </label>
                     )}
@@ -463,7 +463,7 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                 </div>
             )}
 
-             <div className="font-size-sm color-muted" style={{marginTop: '20px'}}>
+             <div className="font-size-md color-dim">
                 Note: Ensure the "Backup" app is running on the device.
             </div>
         </div>
