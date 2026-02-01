@@ -59,10 +59,7 @@ const isSystemSetting = (name: string) => name.startsWith('system_') || (!name.s
 const isDeviceSetting = (name: string) => name.startsWith('device_');
 
 const stripJsonComments = (data: string) => {
-    // 1. Remove comments
-    const noComments = data.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => (g ? "" : m));
-    // 2. Remove trailing commas (e.g., [1, 2, 3,] or {a:1,}) which break JSON.parse
-    return noComments.replace(/,(\s*[\]}])/g, '$1');
+    return data.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (match, group) => (group ? "" : match));
 };
 
 export const BackupRestore: React.FC = () => {
@@ -291,9 +288,9 @@ export const BackupRestore: React.FC = () => {
 
 `;
             let jsonString = JSON.stringify(backup, null, 4);
-            jsonString = jsonString.replace(/(-?\d+),?$/gm, (match, idStr) => {
+            jsonString = jsonString.replace(/(-?\d+)(,)?$/gm, (match, idStr, comma) => {
                 const id = parseInt(idStr);
-                if (appLookup[id]) return `${idStr}, // ${appLookup[id]}`;
+                if (appLookup[id]) return `${idStr}${comma || ""} // ${appLookup[id]}`;
                 return match;
             });
 
