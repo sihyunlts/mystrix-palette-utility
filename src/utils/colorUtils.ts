@@ -46,7 +46,8 @@ export const applyGlobalSettings = (colors: Color[], saturation: number, contras
 
     return colors.map((c, i) => {
         if (!c) return { r: 0, g: 0, b: 0 };
-        if (i === 0) return c; // Skip Index 0 (Off Color)
+        // Skip off LEDs - they should not be affected by contrast
+        if (c.r === 0 && c.g === 0 && c.b === 0) return c;
         
         // 1. Apply Saturation (HSL)
         let { h, s, l } = rgbToHsl(c.r, c.g, c.b);
