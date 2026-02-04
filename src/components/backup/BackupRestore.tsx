@@ -73,7 +73,7 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
     connectedDevice 
 }) => {
     const { t } = useTranslation();
-    const [status, setStatus] = useState<string>("Disconnected");
+    const [status, setStatus] = useState<string | null>(null);
     
     // Selective Restore State
     const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null);
@@ -81,19 +81,17 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
     const [restoreSystem, setRestoreSystem] = useState(true);
     const [restoreDevice, setRestoreDevice] = useState(true);
     
-    // Existence flags to avoid redundant .some() checks in UI
+    // Existence flags
     const [hasLauncherData, setHasLauncherData] = useState(false);
     const [hasSystemData, setHasSystemData] = useState(false);
     const [hasDeviceData, setHasDeviceData] = useState(false);
 
-    // Sync status with connection state
-    useEffect(() => {
-        if (connected && connectedDevice) {
-            setStatus(`Connected to ${connectedDevice.productName}`);
-        } else {
-            setStatus("Disconnected");
-        }
-    }, [connected, connectedDevice]);
+    // Helper for status text
+    const getStatusText = () => {
+        if (status) return status;
+        if (connected && connectedDevice) return t('messages.connectedTo', { name: connectedDevice.productName });
+        return t('messages.disconnected');
+    };
 
     const verifyApp = async () => {
         if (!hidInstance) return { success: false, version: 0 };
@@ -109,7 +107,7 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
     const fetchDeviceBackup = async (): Promise<BackupData> => {
         if (!hidInstance) throw new Error("Device not connected");
         
-        setStatus("Reading current device state...");
+        setStatus(t('messages.readingDevice', { progress: 0 }));
         const info = await hidInstance.requestData(BackupCommand.INFO);
         const totalSize = (info[1] << 24) | (info[2] << 16) | (info[3] << 8) | info[4];
         
@@ -121,7 +119,7 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
             const actualSize = chunkWithHeader[3];
             const data = chunkWithHeader.slice(4, 4 + actualSize);
             fullData.set(data, s * MAX_TRANSFER_SIZE);
-            if (s % 10 === 0) setStatus(`Reading device (${Math.round((s/numSections)*100)}%)...`);
+            if (s % 10 === 0) setStatus(t('messages.readingDevice', { progress: Math.round((s/numSections)*100) }));
         }
 
         // Parse Logic Reused
@@ -188,12 +186,12 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
         
         const deviceAuth = await verifyApp();
         if (!deviceAuth.success) {
-            setStatus("Error: Please open 'Backup' App on device");
+            setStatus(t('messages.openBackupApp'));
             return;
         }
 
         try {
-            setStatus("Preparing backup...");
+            setStatus(t('messages.preparingBackup'));
             const info = await hidInstance.requestData(BackupCommand.INFO);
             const totalSize = (info[1] << 24) | (info[2] << 16) | (info[3] << 8) | info[4];
             
@@ -205,7 +203,7 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                 const actualSize = chunkWithHeader[3];
                 const data = chunkWithHeader.slice(4, 4 + actualSize);
                 fullData.set(data, s * MAX_TRANSFER_SIZE);
-                setStatus(`Downloading (${Math.round((s/numSections)*100)}%)...`);
+                setStatus(t('messages.downloading', { progress: Math.round((s/numSections)*100) }));
             }
             
             let offset = 0;
@@ -296,8 +294,8 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
             downloadLink.download = `matrixos-backup-${new Date().toISOString().split('T')[0]}.jsonc`;
             downloadLink.click();
             await hidInstance.sendCommand(BackupCommand.ACK, [], true);
-            setStatus("Backup Complete");
-        } catch (error: any) { setStatus("Backup Failed: " + error.message); }
+            setStatus(t('messages.backupComplete'));
+        } catch (error: any) { setStatus(t('messages.backupFailed', { error: error.message })); }
     };
 
     const handleFileSelect = () => {
@@ -320,8 +318,8 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                 setHasDeviceData(isDeviceAvailable); setRestoreDevice(isDeviceAvailable);
                 
                 setPendingBackup(backup);
-                setStatus(`Loaded backup file. Select items to restore.`);
-            } catch (err: any) { setStatus("Load Failed: " + err.message); }
+                setStatus(t('messages.loadedBackup'));
+            } catch (err: any) { setStatus(t('messages.loadFailedError', { error: err.message })); }
         };
         input.click();
     };
@@ -331,12 +329,12 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
 
         const deviceAuth = await verifyApp();
         if (!deviceAuth.success) {
-            setStatus("Error: Please open 'Backup' App on device");
+            setStatus(t('messages.openBackupApp'));
             return;
         }
 
         if (pendingBackup.version !== deviceAuth.version) {
-            setStatus(`Restore Failed: Version mismatch (File V${pendingBackup.version} vs Device V${deviceAuth.version})`);
+            setStatus(t('messages.versionMismatch', { fileVersion: pendingBackup.version, deviceVersion: deviceAuth.version }));
             return;
         }
 
@@ -389,30 +387,30 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
             for (let s = 0; s < numSections; s++) {
                 const chunk = payload.slice(s * MAX_TRANSFER_SIZE, (s + 1) * MAX_TRANSFER_SIZE);
                 await hidInstance.requestData(BackupCommand.DATA, [s >> 8, s & 0xFF, chunk.length, ...chunk], true);
-                setStatus(`Uploading (${Math.round((s/numSections)*100)}%)...`);
+                setStatus(t('messages.uploadingProgress', { progress: Math.round((s/numSections)*100) }));
             }
             
             await hidInstance.requestData(BackupCommand.COMMIT, [], true);
-            setStatus("Restore Complete!");
+            setStatus(t('messages.restoreComplete'));
             setPendingBackup(null);
-        } catch (err: any) { setStatus("Restore Failed: " + err.message); }
+        } catch (err: any) { setStatus(t('messages.restoreFailed', { error: err.message })); }
     };
     
     return (
         <div className={backupStyles.container}>
-            <div className={backupStyles.status}>Status: <strong>{status}</strong></div>
+            <div className={backupStyles.status}>{t('labels.status')}: <strong>{getStatusText()}</strong></div>
             <div className={backupStyles.actions}>
                 {connected && (
                     <>
-                        <Button variant="secondary" onClick={handleBackup}>Backup to File</Button>
-                        {!pendingBackup && <Button variant="danger" onClick={handleFileSelect}>Restore from File</Button>}
+                        <Button variant="secondary" onClick={handleBackup}>{t('buttons.backupToFile')}</Button>
+                        {!pendingBackup && <Button variant="danger" onClick={handleFileSelect}>{t('buttons.restoreFromFile')}</Button>}
                     </>
                 )}
             </div>
             
             {pendingBackup && (
                 <div className={backupStyles.selectionContainer}>
-                    <h3>Select Data to Restore</h3>
+                    <h3>{t('messages.selectDataToRestore')}</h3>
 
                     {hasLauncherData && (
                         <label className={backupStyles.item}>
@@ -422,8 +420,8 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 onChange={(e) => setRestoreLauncher(e.target.checked)}
                             />
                             <div className={backupStyles.itemInfo}>
-                                <span className='font-size-md color-main'>App Launcher</span>
-                                <span className="font-size-sm color-dim">Folders, App Order</span>
+                                <span className='font-size-md color-main'>{t('labels.appLauncher')}</span>
+                                <span className="font-size-sm color-dim">{t('messages.descLauncher')}</span>
                             </div>
                         </label>
                     )}
@@ -436,8 +434,8 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 onChange={(e) => setRestoreSystem(e.target.checked)}
                             />
                             <div className={backupStyles.itemInfo}>
-                                <span className='font-size-md color-main'>System Settings</span>
-                                <span className="font-size-sm color-dim">Global configs (Brightness)</span>
+                                <span className='font-size-md color-main'>{t('labels.systemSettings')}</span>
+                                <span className="font-size-sm color-dim">{t('messages.descSystem')}</span>
                             </div>
                         </label>
                     )}
@@ -450,21 +448,21 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({
                                 onChange={(e) => setRestoreDevice(e.target.checked)}
                             />
                             <div className={backupStyles.itemInfo}>
-                                <span className='font-size-md color-main'>Device Settings</span>
-                                <span className="font-size-sm color-dim">Device-specific configs (Touchbar, Bluetooth)</span>
+                                <span className='font-size-md color-main'>{t('labels.deviceSettings')}</span>
+                                <span className="font-size-sm color-dim">{t('messages.descDevice')}</span>
                             </div>
                         </label>
                     )}
 
                     <div className={backupStyles.confirmActions}>
-                         <Button variant="ghost" onClick={() => setPendingBackup(null)}>Cancel</Button>
-                         <Button variant="primary" onClick={executeRestore}>Restore Selected</Button>
+                         <Button variant="ghost" onClick={() => setPendingBackup(null)}>{t('buttons.cancel')}</Button>
+                         <Button variant="primary" onClick={executeRestore}>{t('buttons.restoreSelected')}</Button>
                     </div>
                 </div>
             )}
 
              <div className="font-size-md color-dim">
-                Note: Ensure the "Backup" app is running on the device.
+                {t('messages.backupNote')}
             </div>
         </div>
     );
