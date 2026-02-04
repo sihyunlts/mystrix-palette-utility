@@ -62,7 +62,6 @@
 
 .badge:hover {
   color: var(--color-primary);
-  transform: scale(1.1);
 }
 
 .hasIcon {
