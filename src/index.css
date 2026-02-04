@@ -6,7 +6,7 @@
   
   /* Backgrounds & Surfaces */
   --color-bg-main: rgb(16, 16, 18);
-  --color-bg-surface: rgb(27, 27, 34);
+  --color-bg-surface: rgb(26, 26, 32);
   --color-bg-subtle: rgb(44, 44, 56);
 
   /* Mystrix */
@@ -19,7 +19,7 @@
   --color-text-muted: rgb(100, 100, 110);
   
   /* Borders & Shadows */
-  --color-border: rgb(50, 50, 60);
+  --color-border: rgb(56, 56, 66);
   --shadow-main: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-intense: 0 8px 32px rgba(0, 0, 0, 0.8);
   
