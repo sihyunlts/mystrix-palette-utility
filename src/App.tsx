@@ -519,7 +519,7 @@ const AppContent: React.FC = () => {
                             }
                         }}
                     >
-                      ►
+                      <i className="fa-solid fa-play" />
                     </Button>
                   </div>
                 </div>
