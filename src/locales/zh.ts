@@ -41,6 +41,7 @@ export const zh = {
       noDevices: "未找到 MIDI 设备。",
       initializing: "正在初始化 MIDI...",
       webMidiError: "不支持 Web MIDI API 或访问被拒绝。",
+      webHidError: "不支持 WebHID API。请使用支持的浏览器。",
       deviceDisconnected: "设备已断开连接",
       uploading: "正在上传...",
       uploadFailed: "上传失败",

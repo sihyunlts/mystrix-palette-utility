@@ -20,7 +20,21 @@ export const HIDConnection: React.FC<HIDConnectionProps> = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const checkSupport = React.useCallback(() => {
+    if (!HIDManager.isSupported()) {
+      setError(t('messages.webHidError'));
+      return false;
+    }
+    return true;
+  }, [t]);
+
+  React.useEffect(() => {
+    checkSupport();
+  }, [checkSupport]);
+
   const handleConnect = async () => {
+    if (!checkSupport()) return;
+
     try {
       setIsLoading(true);
       setError(null);

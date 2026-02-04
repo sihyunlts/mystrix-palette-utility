@@ -41,6 +41,7 @@ export const en = {
       noDevices: "No devices detected.",
       initializing: "Initializing MIDI...",
       webMidiError: "Web MIDI API not supported or access denied.",
+      webHidError: "WebHID API not supported. Please use a supported browser.",
       deviceDisconnected: "Device disconnected",
       uploading: "Uploading...",
       uploadFailed: "Upload Failed",

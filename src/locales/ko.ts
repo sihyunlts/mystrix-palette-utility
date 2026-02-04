@@ -41,6 +41,7 @@ export const ko = {
       noDevices: "감지된 기기가 없습니다.",
       initializing: "MIDI 초기화 중...",
       webMidiError: "Web MIDI API가 지원되지 않거나 액세스가 거부되었습니다.",
+      webHidError: "WebHID API가 지원되지 않습니다. 지원되는 브라우저를 사용해주세요.",
       deviceDisconnected: "기기 연결이 끊어졌습니다.",
       uploading: "업로드 중...",
       uploadFailed: "업로드 실패",

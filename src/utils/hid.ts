@@ -21,8 +21,14 @@ export const HID_REPORT_ID = 0xFF;
 export class HIDConnection {
     private device: HIDDevice | null = null;
     private responseResolve: ((value: Uint8Array) => void) | null = null;
+    
+    static isSupported(): boolean {
+        return typeof navigator !== 'undefined' && 'hid' in navigator;
+    }
 
     async connect(): Promise<HIDDevice | null> {
+        if (!HIDConnection.isSupported()) return null;
+
         // @ts-ignore
         const devices = await navigator.hid.requestDevice({
             filters: [{ vendorId: HID_VENDOR_ID }]
@@ -94,12 +100,14 @@ export class HIDConnection {
     }
 
     onDisconnect(callback: () => void) {
-        // @ts-ignore
-        navigator.hid.addEventListener('disconnect', (event) => {
-            if (event.device === this.device) {
-                this.device = null;
-                callback();
-            }
-        });
+        if (typeof navigator !== 'undefined' && 'hid' in navigator) {
+            // @ts-ignore
+            navigator.hid.addEventListener('disconnect', (event) => {
+                if (event.device === this.device) {
+                    this.device = null;
+                    callback();
+                }
+            });
+        }
     }
 }
