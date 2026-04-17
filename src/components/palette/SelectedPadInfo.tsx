@@ -1,9 +1,11 @@
 import React from 'react';
+import { FloatingPortal } from '@floating-ui/react';
 import { useTranslation } from 'react-i18next';
 import { Color } from '../../types';
 import { ColorPicker } from './ColorPicker';
 import { SectionHeader } from '../ui/SectionHeader';
 import styles from './SelectedPadInfo.module.css';
+import { usePopover } from '../../hooks/usePopover';
 
 interface SelectedPadInfoProps {
   selectedIndex?: number;
@@ -17,23 +19,29 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
   onColorChange 
 }) => {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [isClosing, setIsClosing] = React.useState(false);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsOpen(false);
-      setIsClosing(false);
-    }, 200);
-  };
+  const {
+    referenceRef,
+    floatingRef,
+    isOpen,
+    floatingStyles,
+    placement,
+    transitionStatus,
+    getReferenceProps,
+    getFloatingProps,
+    isMounted,
+    close,
+  } = usePopover({
+    placement: 'bottom-start',
+    fallbackPlacements: ['top-start'],
+    offsetPx: 12,
+  });
 
   // Close picker if no pad is selected
   React.useEffect(() => {
-    if (selectedIndex === undefined && isOpen && !isClosing) {
-      handleClose();
+    if (selectedIndex === undefined && isOpen) {
+      close();
     }
-  }, [selectedIndex, isOpen, isClosing]);
+  }, [selectedIndex, isOpen, close]);
 
   return (
     <div className={styles.container}>
@@ -42,25 +50,33 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
       <div className={styles.content}>
         <div className={styles.swatchWrapper}>
           <div 
+            ref={referenceRef}
+            {...getReferenceProps()}
             className={styles.swatch}
             style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}
-            onClick={() => {
-              if (isOpen) handleClose();
-              else setIsOpen(true);
-            }}
           />
-            {isOpen && (
-              <div 
-                className={`${styles.popover} ${isClosing ? 'animate-pop-out' : 'animate-pop-in'}`}
-              >
-              <div className={styles.backdrop} onClick={handleClose} />
-              <ColorPicker
-                color={color}
-                onChange={onColorChange}
-              />
-            </div>
-          )}
         </div>
+
+        {isMounted && (
+          <FloatingPortal>
+            <div
+              ref={floatingRef}
+              style={floatingStyles}
+              {...getFloatingProps()}
+            >
+              <div
+                className={styles.popover}
+                data-placement={placement}
+                data-status={transitionStatus}
+              >
+                <ColorPicker
+                  color={color}
+                  onChange={onColorChange}
+                />
+              </div>
+            </div>
+          </FloatingPortal>
+        )}
 
         <div className={styles.divider} />
 

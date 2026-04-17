@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
+import { FloatingPortal } from '@floating-ui/react';
 import { Button } from './Button';
 import styles from './DropdownButton.module.css';
+import { usePopover } from '../../hooks/usePopover';
 
 type DropdownOption = 
   | { label: string; value: number | string; url?: never; type?: 'item' }
@@ -35,64 +37,40 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
   align = 'left',
   className = ''
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsOpen(false);
-      setIsClosing(false);
-    }, 200);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        handleClose();
-      }
-    };
-
-    if (isOpen && !isClosing) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen, isClosing]);
+  const dropdownPlacement = `${dropdownPosition}-${align === 'right' ? 'end' : 'start'}` as const;
+  const fallbackPlacement = `${dropdownPosition === 'bottom' ? 'top' : 'bottom'}-${align === 'right' ? 'end' : 'start'}` as const;
+  const {
+    referenceRef,
+    floatingRef,
+    isOpen,
+    floatingStyles,
+    placement,
+    transitionStatus,
+    getReferenceProps,
+    getFloatingProps,
+    isMounted,
+    close,
+  } = usePopover({
+    placement: dropdownPlacement,
+    fallbackPlacements: [fallbackPlacement],
+    offsetPx: 8,
+  });
 
   const handleOptionClick = (option: DropdownOption) => {
     if ('value' in option && option.value !== undefined && onSelect) {
       onSelect(option.value);
     }
-    handleClose();
+    close();
   };
 
   const buttonClass = `${styles.button} ${isOpen ? styles.open : ''}`;
-  
-  // Animation logic
-  let animationClass = '';
-  if (isOpen) {
-    if (isClosing) {
-      animationClass = dropdownPosition === 'top' ? 'animate-pop-out-up' : 'animate-pop-out';
-    } else {
-      animationClass = dropdownPosition === 'top' ? 'animate-pop-in-up' : 'animate-pop-in';
-    }
-  }
-
-  const menuClass = `${styles.menu} ${styles[dropdownPosition]} ${styles[`align${align.charAt(0).toUpperCase() + align.slice(1)}`]} ${animationClass}`;
-
   const buttonStyle = color ? { backgroundColor: color } : {};
 
   return (
-    <div className={`${styles.container} ${className}`} ref={dropdownRef}>
+    <div className={`${styles.container} ${className}`}>
       <Button
-        onClick={() => {
-            if (isOpen) {
-                handleClose();
-            } else {
-                setIsOpen(true);
-            }
-        }}
+        ref={referenceRef}
+        {...getReferenceProps()}
         disabled={disabled || loading}
         isLoading={loading}
         variant={variant}
@@ -104,64 +82,64 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
         {loading ? loadingLabel : label}
       </Button>
 
-      {/* Backdrop */}
-      {isOpen && (
-        <div 
-          className={styles.backdrop}
-          onClick={handleClose}
-        />
-      )}
+      {isMounted && (
+        <FloatingPortal>
+          <div
+            ref={floatingRef}
+            style={floatingStyles}
+            {...getFloatingProps()}
+          >
+            <div
+              className={styles.menu}
+              data-placement={placement}
+              data-status={transitionStatus}
+            >
+              {options.map((option, index) => {
+                if (option.type === 'divider') {
+                  return <div key={index} className={styles.divider} />;
+                }
 
-      {isOpen && (
-        <div 
-          className={menuClass}
-        >
-          {options.map((option, index) => {
-            if (option.type === 'divider') {
-              return <div key={index} className={styles.divider} />;
-            }
+                if (option.type === 'header') {
+                  return (
+                    <div key={index} className={`${styles.sectionHeader} font-size-sm`}>
+                      {option.label}
+                    </div>
+                  );
+                }
 
-            if (option.type === 'header') {
-              return (
-                <div key={index} className={`${styles.sectionHeader} font-size-sm`}>
-                  {option.label}
-                </div>
-              );
-            }
+                const isLink = 'url' in option && option.url !== undefined;
 
-            const isLink = 'url' in option && option.url !== undefined;
+                if (isLink) {
+                  return (
+                    <a
+                      key={index}
+                      href={option.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={close}
+                      className={`${styles.menuItem} font-size-md color-main`}
+                    >
+                      {option.label}
+                    </a>
+                  );
+                }
 
-            if (isLink) {
-              return (
-                <a
-                  key={index}
-                  href={option.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setIsOpen(false)}
-                  className={`${styles.menuItem} font-size-md color-main`}
-                >
-                  {option.label}
-                </a>
-              );
-            }
-
-            return (
-              <button
-                key={option.value}
-                onClick={() => handleOptionClick(option)}
-                className={`${styles.menuItem} font-size-md color-main`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleOptionClick(option)}
+                    className={`${styles.menuItem} font-size-md color-main`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </FloatingPortal>
       )}
     </div>
   );
 };
 
-// LinkDropdownButton is now integrated into DropdownButton
-// Use DropdownButton with options containing 'url' property instead
 export const LinkDropdownButton = DropdownButton;

@@ -34,7 +34,6 @@
   min-height: 48px;
   height: 100%;
   aspect-ratio: 1;
-  position: relative;
   display: flex;
   align-items: center;
 }
@@ -45,20 +44,38 @@
   border-radius: 4px;
   border: 1px solid var(--color-border);
   cursor: pointer;
-  transition: transform 0.2s;
 }
 
 .popover {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  z-index: 1000;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition-property: opacity, transform;
+  will-change: opacity, transform;
 }
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
+.popover[data-status='open'] {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.popover[data-status='initial'],
+.popover[data-status='close'] {
+  opacity: 0;
+}
+
+.popover[data-status='close'] {
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.popover[data-placement^='top'][data-status='initial'],
+.popover[data-placement^='top'][data-status='close'] {
+  transform: translateY(0.5rem) scale(0.98);
+}
+
+.popover[data-placement^='bottom'][data-status='initial'],
+.popover[data-placement^='bottom'][data-status='close'] {
+  transform: translateY(-0.5rem) scale(0.98);
 }
 
 .rgbGroup {

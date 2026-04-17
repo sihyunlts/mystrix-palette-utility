@@ -10,8 +10,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   iconPosition?: 'left' | 'right';
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
-  children, 
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
+  children,
   variant = 'primary',
   size = 'default',
   isLoading = false,
@@ -21,8 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   style,
   disabled,
-  ...props 
-}) => {
+  ...props
+}, ref) => {
   const getColorClass = () => {
     if (variant === 'ghost' || variant === 'icon' || variant === 'badge') {
       return active ? 'color-primary' : 'color-dim';
@@ -49,7 +49,8 @@ export const Button: React.FC<ButtonProps> = ({
   );
 
   return (
-    <button 
+    <button
+      ref={ref}
       disabled={disabled || isLoading}
       className={`${classNames} ${hasIcon && size !== 'small' ? styles.hasIcon : ''}`}
       style={style}
@@ -66,4 +67,6 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';
