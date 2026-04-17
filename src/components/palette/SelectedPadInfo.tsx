@@ -43,6 +43,8 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
     }
   }, [selectedIndex, isOpen, close]);
 
+  const referenceProps = selectedIndex === undefined ? {} : getReferenceProps();
+
   return (
     <div className={styles.container}>
       <SectionHeader title={t('labels.selectedPad')} />
@@ -51,7 +53,7 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
         <div className={styles.swatchWrapper}>
           <div 
             ref={referenceRef}
-            {...getReferenceProps()}
+            {...referenceProps}
             className={styles.swatch}
             style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}
           />
