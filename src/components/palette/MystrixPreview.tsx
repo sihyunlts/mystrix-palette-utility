@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, Palette } from '../../types';
 import styles from './MystrixPreview.module.css';
+import { getPreviewDisplayColors } from './previewDisplay';
 
 interface PaletteGridProps {
   palette: Palette;
@@ -71,10 +72,6 @@ const SELECTION_TRANSITION_MS = 150;
 
 const OFF_COLOR: Color = { r: 0, g: 0, b: 0 };
 
-const gamma = 0.6;
-const applyGamma = (channel: number) => Math.pow(channel / 255, gamma) * 255;
-const baseGray = 70;
-
 const SOURCE_VIEWBOX_SIZE = 110;
 const SOURCE_VIEWBOX_OFFSET = 5;
 const SOURCE_PATH_MARGIN = 2;
@@ -126,28 +123,6 @@ const getPadVariant = (localIndex: number): PadVariant => {
     default:
       return 'normal';
   }
-};
-
-const getDisplayColors = (color: Color): DisplayColors => {
-  const toDisplayChannel = (
-    channel: number,
-    grayWeight: number,
-    gammaWeight: number,
-    keepChannelRatio = true
-  ) => Math.round(Math.min(
-    255,
-    baseGray * grayWeight * (keepChannelRatio ? (1 - channel / 255) : 1) + applyGamma(channel) * gammaWeight
-  ));
-
-  const toRgbString = (mapper: (channel: number) => number) => (
-    `rgb(${mapper(color.r)}, ${mapper(color.g)}, ${mapper(color.b)})`
-  );
-
-  return {
-    core: toRgbString((channel) => toDisplayChannel(channel, 1, 1.1)),
-    mid: toRgbString((channel) => toDisplayChannel(channel, 0.65, 0.7)),
-    edge: toRgbString((channel) => toDisplayChannel(channel, 0.5, 0.1, false)),
-  };
 };
 
 const normalizeChannel = (value: number | undefined) => (
@@ -259,7 +234,7 @@ const drawPadGlow = (context: CanvasRenderingContext2D, pad: RenderPad, geometry
 const drawPadBody = (context: CanvasRenderingContext2D, pad: RenderPad, geometry: HousingGeometry) => {
   const rect = getPadRect(pad.localIndex, geometry, getSelectionScale(pad.selectionProgress));
   const path = PAD_PATHS[pad.variant];
-  const displayColors = getDisplayColors(pad.rawColor);
+  const displayColors: DisplayColors = getPreviewDisplayColors(pad.rawColor);
 
   context.save();
   context.translate(rect.x, rect.y);

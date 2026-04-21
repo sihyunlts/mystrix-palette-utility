@@ -6,6 +6,7 @@ import { ColorPicker } from './ColorPicker';
 import { SectionHeader } from '../ui/SectionHeader';
 import styles from './SelectedPadInfo.module.css';
 import { usePopover } from '../../hooks/usePopover';
+import { getPreviewDisplayColors } from './previewDisplay';
 
 interface SelectedPadInfoProps {
   selectedIndex?: number;
@@ -44,6 +45,12 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
   }, [selectedIndex, isOpen, close]);
 
   const referenceProps = selectedIndex === undefined ? {} : getReferenceProps();
+  const displayColors = getPreviewDisplayColors(color);
+  const swatchStyle = {
+    '--selected-pad-core': displayColors.core,
+    '--selected-pad-mid': displayColors.mid,
+    '--selected-pad-edge': displayColors.edge,
+  } as React.CSSProperties;
 
   return (
     <div className={styles.container}>
@@ -55,7 +62,7 @@ export const SelectedPadInfo: React.FC<SelectedPadInfoProps> = ({
             ref={referenceRef}
             {...referenceProps}
             className={styles.swatch}
-            style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}
+            style={swatchStyle}
           />
         </div>
 
