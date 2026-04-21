@@ -461,7 +461,7 @@ const AppContent: React.FC = () => {
                 { label: t('links.matrixOS'), type: 'header' },
                 { label: t('links.wiki'), url: 'https://matrix.203.io' },
                 { label: t('links.editor'), url: 'https://edit.203.io/' },
-                { label: t('links.simulator'), url: 'https://demo.203.io' },
+                { label: t('links.devTool'), url: 'https://dev.203.io' },
                 { type: 'divider' },
                 { label: 'sihyunlights', type: 'header' },
                 { label: 'sihyunlights.com', url: 'https://sihyunlights.com' }

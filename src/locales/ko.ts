@@ -86,7 +86,7 @@ export const ko = {
       matrixOS: "MatrixOS",
       wiki: "MatrixOS 위키",
       editor: "MatrixOS 컨트롤 맵 에디터",
-      simulator: "MatrixOS 시뮬레이터"
+      devTool: "Matrix OS 개발자 도구"
     },
     presets: {
       descriptions: {

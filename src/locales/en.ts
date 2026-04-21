@@ -86,7 +86,7 @@ export const en = {
       matrixOS: "MatrixOS",
       wiki: "MatrixOS wiki",
       editor: "MatrixOS Control Map Editor",
-      simulator: "MatrixOS Simulator"
+      devTool: "Matrix OS Dev Tool"
     },
     presets: {
       descriptions: {

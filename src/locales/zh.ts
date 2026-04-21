@@ -86,7 +86,7 @@ export const zh = {
       matrixOS: "MatrixOS",
       wiki: "MatrixOS 维基",
       editor: "MatrixOS 控制映射编辑器",
-      simulator: "MatrixOS 模拟器"
+      devTool: "Matrix OS 开发工具"
     },
     presets: {
       descriptions: {
