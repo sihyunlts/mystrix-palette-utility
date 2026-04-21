@@ -259,7 +259,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       <div className={styles.rgbInputs}>
         {RGB_CHANNELS.map((channel) => (
           <div key={channel} className={styles.inputGroup}>
-            <label className={`${styles.label} font-size-sm`}>{channel.toUpperCase()}</label>
+            <label className="font-size-sm">{channel.toUpperCase()}</label>
             <input
               type="number"
               min="0"

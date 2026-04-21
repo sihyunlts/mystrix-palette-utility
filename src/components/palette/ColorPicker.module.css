@@ -1,11 +1,9 @@
-
-
 .picker {
   background: var(--color-bg-surface);
   padding: var(--spacing-md);
   border-radius: var(--radius-main);
   border: 1px solid var(--color-border);
-  min-width: 200px;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
@@ -15,7 +13,7 @@
 
 .slPicker {
   width: 100%;
-  height: 140px;
+  height: 128px;
   position: relative;
   cursor: crosshair;
   border-radius: 2px;
@@ -76,12 +74,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2xs);
-}
-
-.label {
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 500;
 }
 
 .input {

@@ -37,7 +37,7 @@
 
 .padLabel {
   position: absolute;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background: #fff;
   color: #000;
   font-weight: 700;
@@ -49,11 +49,27 @@
   pointer-events: none;
 }
 
+.pickerAnchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.pickerFloating {
+  will-change: transform;
+}
+
+.pickerFloatingAnimated {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 .housingLabel {
   margin-top: var(--spacing-lg);
 }
 
 .gridContainer {
+  position: relative;
   display: flex;
   gap: var(--spacing-xl);
   margin-bottom: var(--spacing-xl);

@@ -90,7 +90,7 @@ export const DropdownButton: React.FC<DropdownButtonProps> = ({
             {...getFloatingProps()}
           >
             <div
-              className={styles.menu}
+              className={`${styles.menu} floating-transition`}
               data-placement={placement}
               data-status={transitionStatus}
             >

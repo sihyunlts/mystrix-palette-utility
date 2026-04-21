@@ -1,12 +1,27 @@
-import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  FloatingPortal,
+  autoUpdate,
+  flip,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useTransitionStatus,
+} from '@floating-ui/react';
 import { Color, Palette } from '../../types';
 import styles from './MystrixPreview.module.css';
+import { ColorPicker } from './ColorPicker';
 import { getPreviewDisplayColors } from './previewDisplay';
 
 interface PaletteGridProps {
   palette: Palette;
   selectedIndex?: number;
   onColorSelect?: (index: number) => void;
+  onDismissSelected?: () => void;
+  selectedColor: Color;
+  onSelectedColorChange?: (color: Color) => void;
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
   animateTransitions?: boolean;
@@ -15,9 +30,12 @@ interface PaletteGridProps {
 interface HousingCanvasProps {
   title: string;
   startIndex: number;
+  gridRef: React.RefObject<HTMLDivElement | null>;
   baseColors: Color[];
   selectedIndex?: number;
   onColorSelect?: (index: number) => void;
+  onDismissSelected?: () => void;
+  onPickerAnchorChange?: (startIndex: number, anchor: PickerAnchor | null) => void;
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
   animateTransitions?: boolean;
@@ -57,6 +75,27 @@ interface RenderPad {
   selectionProgress: number;
 }
 
+interface PickerAnchor {
+  left: number;
+  top: number;
+}
+
+interface RenderedPickerState {
+  anchor: PickerAnchor;
+  selectedIndex: number;
+  color: Color;
+}
+
+interface PadLabel {
+  value: number;
+  style: React.CSSProperties;
+}
+
+interface SelectedPadMeta {
+  pickerAnchor: PickerAnchor;
+  label: PadLabel;
+}
+
 type PadVariant =
   | 'normal'
   | 'bottomRightChamfer'
@@ -68,7 +107,6 @@ const GRID_SIZE = 8;
 const PADS_PER_HOUSING = GRID_SIZE * GRID_SIZE;
 const GAP_RATIO = 0.004;
 const SELECTED_SCALE = 1.1;
-const LABEL_OFFSET_PX = 6;
 const COLOR_TRANSITION_MS = 100;
 const SELECTION_TRANSITION_MS = 150;
 
@@ -271,9 +309,12 @@ const drawPadBody = (context: CanvasRenderingContext2D, pad: RenderPad, geometry
 const HousingCanvas = memo(({
   title,
   startIndex,
+  gridRef,
   baseColors,
   selectedIndex,
   onColorSelect,
+  onDismissSelected,
+  onPickerAnchorChange,
   lightshowColors,
   isLightshowActive,
   animateTransitions = false,
@@ -462,31 +503,60 @@ const HousingCanvas = memo(({
     );
 
     if (localIndex === null) {
+      onDismissSelected?.();
       return;
     }
 
     onColorSelect(startIndex + localIndex);
   };
 
-  let selectedPadLabel: { value: number; style: React.CSSProperties } | null = null;
-  if (
-    geometry &&
-    !isLightshowActive &&
-    selectedIndex !== undefined &&
-    selectedIndex >= startIndex &&
-    selectedIndex < startIndex + PADS_PER_HOUSING
-  ) {
+  const selectedPadMeta = useMemo<SelectedPadMeta | null>(() => {
+    if (
+      !geometry ||
+      isLightshowActive ||
+      selectedIndex === undefined ||
+      selectedIndex < startIndex ||
+      selectedIndex >= startIndex + PADS_PER_HOUSING
+    ) {
+      return null;
+    }
+
     const localIndex = selectedIndex - startIndex;
     const rect = getPadRect(localIndex, geometry, SELECTED_SCALE);
 
-    selectedPadLabel = {
-      value: selectedIndex,
-      style: {
-        left: `${rect.centerX}px`,
-        top: `${rect.y + rect.size + LABEL_OFFSET_PX}px`,
+    return {
+      pickerAnchor: {
+        left: rect.centerX,
+        top: rect.y + rect.size,
+      },
+      label: {
+        value: selectedIndex,
+        style: {
+          left: `${rect.centerX}px`,
+          top: `${rect.centerY}px`,
+        },
       },
     };
-  }
+  }, [geometry, isLightshowActive, selectedIndex, startIndex]);
+
+  useLayoutEffect(() => {
+    if (!onPickerAnchorChange) {
+      return;
+    }
+
+    if (!selectedPadMeta?.pickerAnchor || !viewportRef.current || !gridRef.current) {
+      onPickerAnchorChange(startIndex, null);
+      return;
+    }
+
+    const viewportRect = viewportRef.current.getBoundingClientRect();
+    const gridRect = gridRef.current.getBoundingClientRect();
+
+    onPickerAnchorChange(startIndex, {
+      left: viewportRect.left - gridRect.left + selectedPadMeta.pickerAnchor.left,
+      top: viewportRect.top - gridRect.top + selectedPadMeta.pickerAnchor.top,
+    });
+  }, [gridRef, onPickerAnchorChange, selectedPadMeta, startIndex]);
 
   return (
     <div className={styles.housingContainer}>
@@ -502,12 +572,12 @@ const HousingCanvas = memo(({
             className={styles.canvas}
             onClick={handleCanvasClick}
           />
-          {selectedPadLabel && (
+          {selectedPadMeta?.label && (
             <div
               className={`${styles.padLabel} font-size-sm`}
-              style={selectedPadLabel.style}
+              style={selectedPadMeta.label.style}
             >
-              {selectedPadLabel.value}
+              {selectedPadMeta.label.value}
             </div>
           )}
         </div>
@@ -521,20 +591,149 @@ export const PaletteGrid = memo(({
   palette,
   selectedIndex,
   onColorSelect,
+  onDismissSelected,
+  selectedColor,
+  onSelectedColorChange,
   lightshowColors,
   isLightshowActive,
   animateTransitions = false,
 }: PaletteGridProps) => {
   const baseColors = palette.colors;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const previousSelectedIndexRef = useRef<number | undefined>(selectedIndex);
+  const [pickerAnchor, setPickerAnchor] = useState<PickerAnchor | null>(null);
+  const [renderedPicker, setRenderedPicker] = useState<RenderedPickerState | null>(null);
+  const [animatePickerMove, setAnimatePickerMove] = useState(false);
+  const activeHousingStart = selectedIndex !== undefined && selectedIndex >= PADS_PER_HOUSING
+    ? PADS_PER_HOUSING
+    : 0;
+
+  const {
+    refs,
+    floatingStyles,
+    context,
+    placement,
+    update,
+  } = useFloating({
+    open: Boolean(
+      pickerAnchor &&
+      !isLightshowActive &&
+      selectedIndex !== undefined
+    ),
+    onOpenChange: (nextOpen) => {
+      if (!nextOpen) {
+        onDismissSelected?.();
+      }
+    },
+    placement: 'bottom',
+    strategy: 'fixed',
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(8),
+      flip({ fallbackPlacements: ['top'] }),
+      shift({ padding: 8 }),
+    ],
+  });
+  const dismiss = useDismiss(context, {
+    outsidePress: (event) => !gridRef.current?.contains(event.target as Node),
+    outsidePressEvent: 'click',
+  });
+  const { getFloatingProps } = useInteractions([dismiss]);
+  const { isMounted, status } = useTransitionStatus(context, {
+    duration: {
+      open: 200,
+      close: 150,
+    },
+  });
+
+  const handlePickerAnchorChange = useCallback((
+    housingStart: number,
+    anchor: PickerAnchor | null,
+  ) => {
+    if (housingStart !== activeHousingStart) {
+      return;
+    }
+
+    if (!anchor) {
+      setPickerAnchor(null);
+      return;
+    }
+
+    setPickerAnchor((prev) => (
+      prev &&
+      prev.left === anchor.left &&
+      prev.top === anchor.top
+        ? prev
+        : anchor
+    ));
+  }, [activeHousingStart]);
+
+  useLayoutEffect(() => {
+    const previousSelectedIndex = previousSelectedIndexRef.current;
+    setAnimatePickerMove(
+      previousSelectedIndex !== undefined && selectedIndex !== undefined
+    );
+    previousSelectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  useLayoutEffect(() => {
+    if (pickerAnchor && selectedIndex !== undefined) {
+      setRenderedPicker({
+        anchor: pickerAnchor,
+        selectedIndex,
+        color: selectedColor,
+      });
+      return;
+    }
+
+    if (!isMounted) {
+      setRenderedPicker(null);
+    }
+  }, [isMounted, pickerAnchor, selectedColor, selectedIndex]);
+
+  useLayoutEffect(() => {
+    if (!pickerAnchor) {
+      return;
+    }
+
+    update();
+  }, [pickerAnchor, update]);
+
+  const displayedPicker = useMemo(() => {
+    const anchor = (
+      pickerAnchor &&
+      !isLightshowActive &&
+      selectedIndex !== undefined
+    ) ? pickerAnchor : renderedPicker?.anchor;
+    const index = selectedIndex ?? renderedPicker?.selectedIndex;
+    const color = selectedIndex !== undefined ? selectedColor : renderedPicker?.color;
+
+    if (!anchor || index === undefined || !color) {
+      return null;
+    }
+
+    return {
+      anchor,
+      index,
+      color,
+      style: {
+        left: `${anchor.left}px`,
+        top: `${anchor.top}px`,
+      } satisfies React.CSSProperties,
+    };
+  }, [isLightshowActive, pickerAnchor, renderedPicker, selectedColor, selectedIndex]);
 
   return (
-    <div className={styles.gridContainer}>
+    <div ref={gridRef} className={styles.gridContainer}>
       <HousingCanvas
         title="0 - 63"
         startIndex={0}
+        gridRef={gridRef}
         baseColors={baseColors}
         selectedIndex={selectedIndex}
         onColorSelect={onColorSelect}
+        onDismissSelected={onDismissSelected}
+        onPickerAnchorChange={handlePickerAnchorChange}
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
         animateTransitions={animateTransitions}
@@ -542,13 +741,47 @@ export const PaletteGrid = memo(({
       <HousingCanvas
         title="64 - 127"
         startIndex={64}
+        gridRef={gridRef}
         baseColors={baseColors}
         selectedIndex={selectedIndex}
         onColorSelect={onColorSelect}
+        onDismissSelected={onDismissSelected}
+        onPickerAnchorChange={handlePickerAnchorChange}
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
         animateTransitions={animateTransitions}
       />
+      {displayedPicker && (
+        <div
+          ref={refs.setReference}
+          className={styles.pickerAnchor}
+          style={displayedPicker.style}
+        />
+      )}
+      {isMounted && displayedPicker && onSelectedColorChange && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            className={`${styles.pickerFloating} ${animatePickerMove ? styles.pickerFloatingAnimated : ''}`}
+            style={{
+              ...floatingStyles,
+              zIndex: 1000,
+            }}
+            {...getFloatingProps()}
+          >
+            <div
+              className="floating-transition"
+              data-placement={placement}
+              data-status={status}
+            >
+              <ColorPicker
+                color={displayedPicker.color}
+                onChange={onSelectedColorChange}
+              />
+            </div>
+          </div>
+        </FloatingPortal>
+      )}
     </div>
   );
 });

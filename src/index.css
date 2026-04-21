@@ -139,6 +139,38 @@ h3 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); m
   font-family: 'Space Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+.floating-transition {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition-property: opacity, transform;
+  will-change: opacity, transform;
+}
+
+.floating-transition[data-status='open'] {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.floating-transition[data-status='initial'],
+.floating-transition[data-status='close'] {
+  opacity: 0;
+}
+
+.floating-transition[data-status='close'] {
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.floating-transition[data-placement^='top'][data-status='initial'],
+.floating-transition[data-placement^='top'][data-status='close'] {
+  transform: translateY(0.5rem) scale(0.98);
+}
+
+.floating-transition[data-placement^='bottom'][data-status='initial'],
+.floating-transition[data-placement^='bottom'][data-status='close'] {
+  transform: translateY(-0.5rem) scale(0.98);
+}
+
 /* Page Entrance Animations */
 .animate-fade-in-up {
   opacity: 0;

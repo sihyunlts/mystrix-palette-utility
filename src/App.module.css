@@ -74,7 +74,7 @@
   height: fit-content;
 }
 
-.pageTitleDropdown > button {
+.pageTitleDropdown>button {
   font-size: 1.25rem !important;
   font-weight: 700 !important;
   padding: 0 0 !important;
@@ -86,7 +86,7 @@
   min-width: auto !important;
 }
 
-.pageTitleDropdown > button i {
+.pageTitleDropdown>button i {
   font-size: 0.9375rem !important;
 }
 
@@ -117,21 +117,7 @@
   min-width: 0;
 }
 
-.controls {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--spacing-xl);
-  margin-top: var(--spacing-2xl);
-}
-
-.controlSection {
-  flex: 1 1 360px;
-  display: flex;
-}
-
 .globalAdjustmentWrapper {
-  flex: 1 1 360px;
   display: flex;
 }
 

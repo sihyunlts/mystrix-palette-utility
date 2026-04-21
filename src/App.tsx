@@ -7,7 +7,6 @@ import { PaletteGrid } from './components/palette/MystrixPreview';
 import { DropdownButton } from './components/ui/DropdownButton';
 import { Button } from './components/ui/Button';
 import { ModalProvider, useModal } from './components/ui/Modal';
-import { SelectedPadInfo } from './components/palette/SelectedPadInfo';
 import { GlobalAdjustmentBox } from './components/palette/GlobalAdjustmentBox';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
@@ -360,6 +359,14 @@ const AppContent: React.FC = () => {
     setSelectedColorIndex(prev => prev === index ? undefined : index);
   }, []);
 
+  const handlePadDismiss = useCallback(() => {
+    setSelectedColorIndex(undefined);
+  }, []);
+
+  const selectedPadColor = (
+    selectedColorIndex !== undefined ? palette.colors[selectedColorIndex] : null
+  ) || { r: 0, g: 0, b: 0 };
+
   const handleUpload = async (slotId: number) => {
     if (!matrixOS) return;
 
@@ -592,33 +599,28 @@ const AppContent: React.FC = () => {
                 palette={effectivePalette}
                 selectedIndex={selectedColorIndex}
                 onColorSelect={handlePadSelect}
+                onDismissSelected={handlePadDismiss}
+                selectedColor={selectedPadColor}
+                onSelectedColorChange={(color) => (
+                  selectedColorIndex !== undefined && handleColorChange(selectedColorIndex, color)
+                )}
                 lightshowColors={lightshowColors}
                 isLightshowActive={isLightshowActive}
                 animateTransitions={previewTransitionsEnabled && !isLightshowActive}
               />
 
-              <div className={styles.controls}>
-                <div className={styles.controlSection}>
-                  <SelectedPadInfo
-                    selectedIndex={selectedColorIndex}
-                    color={(selectedColorIndex !== undefined ? palette.colors[selectedColorIndex] : null) || { r: 0, g: 0, b: 0 }}
-                    onColorChange={(color) => selectedColorIndex !== undefined && handleColorChange(selectedColorIndex, color)}
+              {globalSaturation !== undefined && globalContrast !== undefined && (
+                <div className={styles.globalAdjustmentWrapper}>
+                  <GlobalAdjustmentBox 
+                    saturation={globalSaturation}
+                    contrast={globalContrast}
+                    onSaturationChange={handleSaturationChange}
+                    onContrastChange={handleContrastChange}
+                    onReset={handleAdjustmentReset}
+                    sliderShouldAnimate={sliderResetAnimating}
                   />
                 </div>
-
-                {globalSaturation !== undefined && globalContrast !== undefined && (
-                  <div className={styles.globalAdjustmentWrapper}>
-                    <GlobalAdjustmentBox 
-                      saturation={globalSaturation}
-                      contrast={globalContrast}
-                      onSaturationChange={handleSaturationChange}
-                      onContrastChange={handleContrastChange}
-                      onReset={handleAdjustmentReset}
-                      sliderShouldAnimate={sliderResetAnimating}
-                    />
-                  </div>
-                )}
-              </div>
+              )}
 
               <div className={styles.actionBar}>
                 <div className={styles.actionGroup}>
