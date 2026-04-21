@@ -18,7 +18,7 @@ export class LightshowPlayer {
   private onHardwareEvent: (events: HardwareLightshowEvent[]) => void;
   private onUIEvent: (events: UILightshowEvent[]) => void;
   private onFinished?: () => void;
-  private events: { time: number; index: number; velocity: number; on: boolean }[] = [];
+  private events: { time: number; index: number; velocity: number }[] = [];
   private startTime: number = 0;
   private hardwareEventIndex: number = 0;
   private uiEventIndex: number = 0;
@@ -36,18 +36,6 @@ export class LightshowPlayer {
     this.onFinished = onFinished;
   }
 
-  async load(url: string) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    this.midi = new Midi(arrayBuffer as any);
-    return this.midi;
-  }
-
-  async loadArrayBuffer(arrayBuffer: ArrayBuffer) {
-    this.midi = new Midi(arrayBuffer as any);
-    return this.midi;
-  }
-
   setMidi(midi: Midi) {
     this.midi = midi;
     const tracks = this.midi.tracks;
@@ -59,13 +47,11 @@ export class LightshowPlayer {
           time: note.time * 1000,
           index: note.midi,
           velocity: Math.round(note.velocity * 127),
-          on: true
         });
         this.events.push({
           time: (note.time + note.duration) * 1000,
           index: note.midi,
           velocity: 0,
-          on: false
         });
       });
     });

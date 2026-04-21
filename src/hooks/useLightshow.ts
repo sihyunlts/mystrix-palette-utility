@@ -4,8 +4,7 @@ import { Color, Palette } from '../types';
 import { Midi } from '@tonejs/midi';
 import { expand6bit } from '../utils/paletteFile';
 
-// Singleton caches
-const MIDI_CACHE: Map<string, ArrayBuffer> = new Map();
+// Cache parsed MIDI objects so system animations can start without reparsing.
 const MIDI_OBJ_CACHE: Map<string, Midi> = new Map();
 
 // Eager load and parse system MIDI files
@@ -14,7 +13,6 @@ const preloadSystemMIDI = async () => {
     const source = '/connected.mid';
     const response = await fetch(source);
     const arrayBuffer = await response.arrayBuffer();
-    MIDI_CACHE.set(source, arrayBuffer);
     MIDI_OBJ_CACHE.set(source, new Midi(arrayBuffer));
   } catch (e) {
     console.warn('Failed to pre-cache system MIDI:', e);
@@ -104,22 +102,15 @@ export const useLightshow = (
     const targetOutput = device || midiOutputRef.current;
     
     try {
-      let midiObj: any;
+      let midiObj: Midi;
 
-      // 1. Data Loading Phase (with nested caching)
+      // 1. Data Loading Phase
       if (typeof source === 'string') {
         if (MIDI_OBJ_CACHE.has(source)) {
-          midiObj = MIDI_OBJ_CACHE.get(source);
+          midiObj = MIDI_OBJ_CACHE.get(source)!;
         } else {
-          let arrayBuffer: ArrayBuffer;
-          if (MIDI_CACHE.has(source)) {
-            arrayBuffer = MIDI_CACHE.get(source)!;
-          } else {
-            const response = await fetch(source);
-            arrayBuffer = await response.arrayBuffer();
-            MIDI_CACHE.set(source, arrayBuffer);
-          }
-          // The parsing itself is expensive, cache the result
+          const response = await fetch(source);
+          const arrayBuffer = await response.arrayBuffer();
           midiObj = new Midi(arrayBuffer);
           MIDI_OBJ_CACHE.set(source, midiObj);
         }
