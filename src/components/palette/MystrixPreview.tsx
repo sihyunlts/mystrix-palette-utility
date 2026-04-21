@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, Palette } from '../../types';
 import styles from './MystrixPreview.module.css';
 
@@ -10,145 +10,512 @@ interface PaletteGridProps {
   isLightshowActive?: boolean;
 }
 
-interface PadProps {
-  index: number;
-  baseColorData: Color;
-  lightshowColorData?: Color | null;
-  isSelected: boolean;
-  onClick?: (index: number) => void;
+interface HousingCanvasProps {
+  title: string;
+  startIndex: number;
+  baseColors: Color[];
+  selectedIndex?: number;
+  onColorSelect?: (index: number) => void;
+  lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
 }
+
+interface CanvasSize {
+  width: number;
+  height: number;
+}
+
+interface HousingGeometry {
+  size: number;
+  offsetX: number;
+  offsetY: number;
+  cellSize: number;
+  step: number;
+}
+
+interface PadRect {
+  x: number;
+  y: number;
+  size: number;
+  centerX: number;
+  centerY: number;
+}
+
+interface DisplayColors {
+  core: string;
+  mid: string;
+  edge: string;
+}
+
+interface RenderPad {
+  localIndex: number;
+  variant: PadVariant;
+  rawColor: Color;
+  selectionProgress: number;
+}
+
+type PadVariant =
+  | 'normal'
+  | 'bottomRightChamfer'
+  | 'bottomLeftChamfer'
+  | 'topRightChamfer'
+  | 'topLeftChamfer';
+
+const GRID_SIZE = 8;
+const PADS_PER_HOUSING = GRID_SIZE * GRID_SIZE;
+const GAP_RATIO = 0.004;
+const SELECTED_SCALE = 1.1;
+const LABEL_OFFSET_PX = 6;
+const COLOR_TRANSITION_MS = 100;
+const SELECTION_TRANSITION_MS = 150;
 
 const OFF_COLOR: Color = { r: 0, g: 0, b: 0 };
 
 const gamma = 0.6;
-const applyGamma = (c: number) => Math.pow(c / 255, gamma) * 255;
+const applyGamma = (channel: number) => Math.pow(channel / 255, gamma) * 255;
 const baseGray = 70;
 
-const getColors = (c: Color, isSelected: boolean) => {
-  const r_core = Math.round(Math.min(255, baseGray * (1 - c.r / 255) + applyGamma(c.r) * 1.1));
-  const g_core = Math.round(Math.min(255, baseGray * (1 - c.g / 255) + applyGamma(c.g) * 1.1));
-  const b_core = Math.round(Math.min(255, baseGray * (1 - c.b / 255) + applyGamma(c.b) * 1.1));
-  
-  const r_mid = Math.round(Math.min(255, baseGray * 0.7 * (1 - c.r / 255) + applyGamma(c.r) * 0.75));
-  const g_mid = Math.round(Math.min(255, baseGray * 0.7 * (1 - c.g / 255) + applyGamma(c.g) * 0.75));
-  const b_mid = Math.round(Math.min(255, baseGray * 0.7 * (1 - c.b / 255) + applyGamma(c.b) * 0.75));
+const SOURCE_VIEWBOX_SIZE = 110;
+const SOURCE_VIEWBOX_OFFSET = 5;
+const SOURCE_PATH_MARGIN = 2;
+const SOURCE_PATH_SCALE = (100 - SOURCE_PATH_MARGIN * 2) / 100;
+const localMin = (SOURCE_VIEWBOX_OFFSET + SOURCE_PATH_MARGIN) / SOURCE_VIEWBOX_SIZE;
+const localMax = (SOURCE_VIEWBOX_OFFSET + (100 - SOURCE_PATH_MARGIN)) / SOURCE_VIEWBOX_SIZE;
+const localChamfer = ((8 / 42) * 100 * SOURCE_PATH_SCALE) / SOURCE_VIEWBOX_SIZE;
+const localRadius = ((2.5 / 42) * 100 * SOURCE_PATH_SCALE) / SOURCE_VIEWBOX_SIZE;
+const localFillet = ((1.5 / 42) * 100 * SOURCE_PATH_SCALE) / SOURCE_VIEWBOX_SIZE;
 
-  const r_edge = Math.round(Math.min(255, baseGray * 0.6 + applyGamma(c.r) * 0.25));
-  const g_edge = Math.round(Math.min(255, baseGray * 0.6 + applyGamma(c.g) * 0.25));
-  const b_edge = Math.round(Math.min(255, baseGray * 0.6 + applyGamma(c.b) * 0.25));
+const createPadPathString = (variant: PadVariant) => {
+  if (variant === 'bottomRightChamfer') {
+    return `M${localMin + localRadius},${localMin} H${localMax - localRadius} Q${localMax},${localMin} ${localMax},${localMin + localRadius} V${localMax - localChamfer - localFillet} Q${localMax},${localMax - localChamfer} ${localMax - localFillet},${localMax - localChamfer + localFillet} L${localMax - localChamfer + localFillet},${localMax - localFillet} Q${localMax - localChamfer},${localMax} ${localMax - localChamfer - localFillet},${localMax} H${localMin + localRadius} Q${localMin},${localMax} ${localMin},${localMax - localRadius} V${localMin + localRadius} Q${localMin},${localMin} ${localMin + localRadius},${localMin} Z`;
+  }
+
+  if (variant === 'bottomLeftChamfer') {
+    return `M${localMin + localRadius},${localMin} H${localMax - localRadius} Q${localMax},${localMin} ${localMax},${localMin + localRadius} V${localMax - localRadius} Q${localMax},${localMax} ${localMax - localRadius},${localMax} H${localMin + localChamfer + localFillet} Q${localMin + localChamfer},${localMax} ${localMin + localChamfer - localFillet},${localMax - localFillet} L${localMin + localFillet},${localMax - localChamfer + localFillet} Q${localMin},${localMax - localChamfer} ${localMin},${localMax - localChamfer - localFillet} V${localMin + localRadius} Q${localMin},${localMin} ${localMin + localRadius},${localMin} Z`;
+  }
+
+  if (variant === 'topRightChamfer') {
+    return `M${localMin + localRadius},${localMin} H${localMax - localChamfer - localFillet} Q${localMax - localChamfer},${localMin} ${localMax - localChamfer + localFillet},${localMin + localFillet} L${localMax - localFillet},${localMin + localChamfer - localFillet} Q${localMax},${localMin + localChamfer} ${localMax},${localMin + localChamfer + localFillet} V${localMax - localRadius} Q${localMax},${localMax} ${localMax - localRadius},${localMax} H${localMin + localRadius} Q${localMin},${localMax} ${localMin},${localMax - localRadius} V${localMin + localRadius} Q${localMin},${localMin} ${localMin + localRadius},${localMin} Z`;
+  }
+
+  if (variant === 'topLeftChamfer') {
+    return `M${localMin + localChamfer + localFillet},${localMin} H${localMax - localRadius} Q${localMax},${localMin} ${localMax},${localMin + localRadius} V${localMax - localRadius} Q${localMax},${localMax} ${localMax - localRadius},${localMax} H${localMin + localRadius} Q${localMin},${localMax} ${localMin},${localMax - localRadius} V${localMin + localChamfer + localFillet} Q${localMin},${localMin + localChamfer} ${localMin + localFillet},${localMin + localChamfer - localFillet} L${localMin + localChamfer - localFillet},${localMin + localFillet} Q${localMin + localChamfer},${localMin} ${localMin + localChamfer + localFillet},${localMin} Z`;
+  }
+
+  return `M${localMin + localRadius},${localMin} H${localMax - localRadius} Q${localMax},${localMin} ${localMax},${localMin + localRadius} V${localMax - localRadius} Q${localMax},${localMax} ${localMax - localRadius},${localMax} H${localMin + localRadius} Q${localMin},${localMax} ${localMin},${localMax - localRadius} V${localMin + localRadius} Q${localMin},${localMin} ${localMin + localRadius},${localMin} Z`;
+};
+
+const PAD_PATHS: Record<PadVariant, Path2D> = {
+  normal: new Path2D(createPadPathString('normal')),
+  bottomRightChamfer: new Path2D(createPadPathString('bottomRightChamfer')),
+  bottomLeftChamfer: new Path2D(createPadPathString('bottomLeftChamfer')),
+  topRightChamfer: new Path2D(createPadPathString('topRightChamfer')),
+  topLeftChamfer: new Path2D(createPadPathString('topLeftChamfer')),
+};
+
+const getPadVariant = (localIndex: number): PadVariant => {
+  switch (localIndex) {
+    case 27:
+      return 'bottomRightChamfer';
+    case 28:
+      return 'bottomLeftChamfer';
+    case 35:
+      return 'topRightChamfer';
+    case 36:
+      return 'topLeftChamfer';
+    default:
+      return 'normal';
+  }
+};
+
+const getDisplayColors = (color: Color): DisplayColors => {
+  const toDisplayChannel = (
+    channel: number,
+    grayWeight: number,
+    gammaWeight: number,
+    keepChannelRatio = true
+  ) => Math.round(Math.min(
+    255,
+    baseGray * grayWeight * (keepChannelRatio ? (1 - channel / 255) : 1) + applyGamma(channel) * gammaWeight
+  ));
+
+  const toRgbString = (mapper: (channel: number) => number) => (
+    `rgb(${mapper(color.r)}, ${mapper(color.g)}, ${mapper(color.b)})`
+  );
 
   return {
-    core: `rgb(${r_core}, ${g_core}, ${b_core})`,
-    mid: `rgb(${r_mid}, ${g_mid}, ${b_mid})`,
-    edge: `rgb(${r_edge}, ${g_edge}, ${b_edge})`,
-    glow: `rgba(${c.r}, ${c.g}, ${c.b}, ${isSelected ? 0.8 : 0.5})`
+    core: toRgbString((channel) => toDisplayChannel(channel, 1, 1.1)),
+    mid: toRgbString((channel) => toDisplayChannel(channel, 0.65, 0.7)),
+    edge: toRgbString((channel) => toDisplayChannel(channel, 0.5, 0.1, false)),
   };
 };
 
-const Pad = memo(({ 
-  index, 
-  baseColorData, 
-  lightshowColorData, 
-  isSelected, 
-  onClick, 
-  isLightshowActive 
-}: PadProps) => {
-  const intraBlockIndex = index % 64;
-  const isCenterPad = [27, 28, 35, 36].includes(intraBlockIndex);
+const normalizeChannel = (value: number | undefined) => (
+  typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0, Math.min(255, Math.round(value)))
+    : 0
+);
+const normalizeColor = (color: Partial<Color> | null | undefined): Color => ({
+  r: normalizeChannel(color?.r),
+  g: normalizeChannel(color?.g),
+  b: normalizeChannel(color?.b),
+});
+const isOffColor = (color: Color) => color.r === 0 && color.g === 0 && color.b === 0;
+const lerp = (from: number, to: number, progress: number) => from + (to - from) * progress;
+const easeOutCubic = (progress: number) => 1 - Math.pow(1 - progress, 3);
+const getSelectionScale = (selectionProgress: number) => 1 + (SELECTED_SCALE - 1) * selectionProgress;
+const lerpColor = (from: Color, to: Color, progress: number): Color => ({
+  r: normalizeChannel(lerp(from.r, to.r, progress)),
+  g: normalizeChannel(lerp(from.g, to.g, progress)),
+  b: normalizeChannel(lerp(from.b, to.b, progress)),
+});
+const hasPadMotion = (from: RenderPad, to: RenderPad) => (
+  from.rawColor.r !== to.rawColor.r ||
+  from.rawColor.g !== to.rawColor.g ||
+  from.rawColor.b !== to.rawColor.b ||
+  from.selectionProgress !== to.selectionProgress
+);
 
-  const displayColorData = lightshowColorData 
-    ? lightshowColorData 
-    : (isLightshowActive ? OFF_COLOR : baseColorData);
-  
-  const displayColors = getColors(displayColorData, isSelected);
-
-  const margin = 2;
-  const scale = (100 - 2 * margin) / 100;
-  const sC = (8 / 42) * 100 * scale;
-  const sR = (3 / 42) * 100 * scale;
-  const sF = (1.5 / 42) * 100 * scale;
-  const min = margin;
-  const max = 100 - margin;
-
-  let pathD = "";
-  if (isCenterPad) {
-    if (intraBlockIndex === 27) {
-      // Bottom-Right inner chamfer
-      pathD = `M${min+sR},${min} H${max-sR} Q${max},${min} ${max},${min+sR} V${max-sC-sF} Q${max},${max-sC} ${max-sF},${max-sC+sF} L${max-sC+sF},${max-sF} Q${max-sC},${max} ${max-sC-sF},${max} H${min+sR} Q${min},${max} ${min},${max-sR} V${min+sR} Q${min},${min} ${min+sR},${min} Z`;
-    } else if (intraBlockIndex === 28) {
-      // Bottom-Left inner chamfer
-      pathD = `M${min+sR},${min} H${max-sR} Q${max},${min} ${max},${min+sR} V${max-sR} Q${max},${max} ${max-sR},${max} H${min+sC+sF} Q${min+sC},${max} ${min+sC-sF},${max-sF} L${min+sF},${max-sC+sF} Q${min},${max-sC} ${min},${max-sC-sF} V${min+sR} Q${min},${min} ${min+sR},${min} Z`;
-    } else if (intraBlockIndex === 35) {
-      // Top-Right inner chamfer
-      pathD = `M${min+sR},${min} H${max-sC-sF} Q${max-sC},${min} ${max-sC+sF},${min+sF} L${max-sF},${min+sC-sF} Q${max},${min+sC} ${max},${min+sC+sF} V${max-sR} Q${max},${max} ${max-sR},${max} H${min+sR} Q${min},${max} ${min},${max-sR} V${min+sR} Q${min},${min} ${min+sR},${min} Z`;
-    } else if (intraBlockIndex === 36) {
-      // Top-Left inner chamfer
-      pathD = `M${min+sC+sF},${min} H${max-sR} Q${max},${min} ${max},${min+sR} V${max-sR} Q${max},${max} ${max-sR},${max} H${min+sR} Q${min},${max} ${min},${max-sR} V${min+sC+sF} Q${min},${min+sC} ${min+sF},${min+sC-sF} L${min+sC-sF},${min+sF} Q${min+sC},${min} ${min+sC+sF},${min} Z`;
-    }
-  } else {
-    pathD = `M${min+sR},${min} H${max-sR} Q${max},${min} ${max},${min+sR} V${max-sR} Q${max},${max} ${max-sR},${max} H${min+sR} Q${min},${max} ${min},${max-sR} V${min+sR} Q${min},${min} ${min+sR},${min} Z`;
+const createHousingGeometry = (width: number, height: number): HousingGeometry | null => {
+  if (width <= 0 || height <= 0) {
+    return null;
   }
 
-  const gradientId = `led-grad-${index}`;
+  const size = Math.min(width, height);
+  const offsetX = (width - size) / 2;
+  const offsetY = (height - size) / 2;
+  const gap = size * GAP_RATIO;
+  const cellSize = (size - gap * (GRID_SIZE - 1)) / GRID_SIZE;
 
-  const padClass = `${styles.pad} ${isSelected ? styles.selected : ''} ${isLightshowActive ? styles.isLightshowActive : ''}`;
-  const padStyle = {
-    transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+  return {
+    size,
+    offsetX,
+    offsetY,
+    cellSize,
+    step: cellSize + gap,
+  };
+};
+
+const getPadRect = (localIndex: number, geometry: HousingGeometry, scale = 1): PadRect => {
+  const column = localIndex % GRID_SIZE;
+  const row = Math.floor(localIndex / GRID_SIZE);
+  const drawSize = geometry.cellSize * scale;
+  const x = geometry.offsetX + column * geometry.step + (geometry.cellSize - drawSize) / 2;
+  const y = geometry.offsetY + row * geometry.step + (geometry.cellSize - drawSize) / 2;
+
+  return {
+    x,
+    y,
+    size: drawSize,
+    centerX: x + drawSize / 2,
+    centerY: y + drawSize / 2,
+  };
+};
+
+const getPadIndexAtPoint = (x: number, y: number, geometry: HousingGeometry) => {
+  const localX = x - geometry.offsetX;
+  const localY = y - geometry.offsetY;
+
+  if (localX < 0 || localY < 0 || localX >= geometry.size || localY >= geometry.size) {
+    return null;
+  }
+
+  const column = Math.floor(localX / geometry.step);
+  const row = Math.floor(localY / geometry.step);
+
+  if (column < 0 || column >= GRID_SIZE || row < 0 || row >= GRID_SIZE) {
+    return null;
+  }
+
+  const withinCellX = localX - column * geometry.step;
+  const withinCellY = localY - row * geometry.step;
+
+  if (withinCellX > geometry.cellSize || withinCellY > geometry.cellSize) {
+    return null;
+  }
+
+  return row * GRID_SIZE + column;
+};
+
+const drawPadGlow = (context: CanvasRenderingContext2D, pad: RenderPad, geometry: HousingGeometry) => {
+  const rect = getPadRect(pad.localIndex, geometry, getSelectionScale(pad.selectionProgress));
+  const path = PAD_PATHS[pad.variant];
+
+  if (isOffColor(pad.rawColor)) {
+    return;
+  }
+
+  const glowScale = lerp(1.02, 1.06, pad.selectionProgress);
+
+  context.save();
+  context.translate(rect.centerX, rect.centerY);
+  context.scale(rect.size * glowScale, rect.size * glowScale);
+  context.translate(-0.5, -0.5);
+  context.fillStyle = `rgba(${pad.rawColor.r}, ${pad.rawColor.g}, ${pad.rawColor.b}, ${lerp(0.42, 0.68, pad.selectionProgress)})`;
+  context.fill(path);
+  context.restore();
+};
+
+const drawPadBody = (context: CanvasRenderingContext2D, pad: RenderPad, geometry: HousingGeometry) => {
+  const rect = getPadRect(pad.localIndex, geometry, getSelectionScale(pad.selectionProgress));
+  const path = PAD_PATHS[pad.variant];
+  const displayColors = getDisplayColors(pad.rawColor);
+
+  context.save();
+  context.translate(rect.x, rect.y);
+  context.scale(rect.size, rect.size);
+
+  const bodyGradient = context.createRadialGradient(0.5, 0.5, 0, 0.5, 0.5, 0.7);
+  bodyGradient.addColorStop(0, displayColors.core);
+  bodyGradient.addColorStop(0.3, displayColors.core);
+  bodyGradient.addColorStop(0.7, displayColors.mid);
+  bodyGradient.addColorStop(1, displayColors.edge);
+
+  context.fillStyle = bodyGradient;
+  context.fill(path);
+
+  if (pad.selectionProgress > 0) {
+    context.strokeStyle = `rgba(255,255,255,${pad.selectionProgress})`;
+    context.lineWidth = 0.04;
+    context.lineJoin = 'round';
+    context.stroke(path);
+  }
+
+  context.strokeStyle = 'rgba(255,255,255,0.1)';
+  context.lineWidth = 0.01;
+  context.lineJoin = 'round';
+  context.stroke(path);
+
+  context.restore();
+};
+
+const HousingCanvas = memo(({
+  title,
+  startIndex,
+  baseColors,
+  selectedIndex,
+  onColorSelect,
+  lightshowColors,
+  isLightshowActive,
+}: HousingCanvasProps) => {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const glowCanvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animatedPadsRef = useRef<RenderPad[] | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextWidth = entry.contentRect.width;
+      const nextHeight = entry.contentRect.height;
+
+      setSize((prev) => (
+        prev.width === nextWidth && prev.height === nextHeight
+          ? prev
+          : { width: nextWidth, height: nextHeight }
+      ));
+    });
+
+    observer.observe(viewport);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const geometry = useMemo(
+    () => createHousingGeometry(size.width, size.height),
+    [size.height, size.width]
+  );
+
+  const targetPads = useMemo<RenderPad[]>(
+    () => Array.from({ length: PADS_PER_HOUSING }, (_, localIndex) => {
+      const absoluteIndex = startIndex + localIndex;
+      const lightshowColor = lightshowColors?.get(absoluteIndex);
+      const baseColor = baseColors[absoluteIndex] ?? OFF_COLOR;
+      const rawColor = normalizeColor(lightshowColor ?? (isLightshowActive ? OFF_COLOR : baseColor));
+
+      return {
+        localIndex,
+        variant: getPadVariant(localIndex),
+        rawColor,
+        selectionProgress: selectedIndex === absoluteIndex ? 1 : 0,
+      };
+    }),
+    [baseColors, isLightshowActive, lightshowColors, selectedIndex, startIndex]
+  );
+
+  useLayoutEffect(() => {
+    const glowCanvas = glowCanvasRef.current;
+    const canvas = canvasRef.current;
+    if (!glowCanvas || !canvas || !geometry) {
+      return;
+    }
+
+    const glowContext = glowCanvas.getContext('2d');
+    const context = canvas.getContext('2d');
+    if (!glowContext || !context) {
+      return;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const pixelWidth = Math.max(1, Math.round(size.width * dpr));
+    const pixelHeight = Math.max(1, Math.round(size.height * dpr));
+
+    if (glowCanvas.width !== pixelWidth || glowCanvas.height !== pixelHeight) {
+      glowCanvas.width = pixelWidth;
+      glowCanvas.height = pixelHeight;
+    }
+
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+
+    const drawPads = (pads: RenderPad[]) => {
+      glowContext.setTransform(1, 0, 0, 1, 0, 0);
+      glowContext.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
+      glowContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      for (const pad of pads) {
+        drawPadGlow(glowContext, pad, geometry);
+      }
+
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      for (const pad of pads) {
+        drawPadBody(context, pad, geometry);
+      }
+    };
+
+    const fromPads = animatedPadsRef.current?.length === targetPads.length
+      ? animatedPadsRef.current
+      : targetPads;
+
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    if (!fromPads.some((pad, index) => hasPadMotion(pad, targetPads[index]))) {
+      animatedPadsRef.current = targetPads;
+      drawPads(targetPads);
+      return;
+    }
+
+    // Resizing a canvas clears its bitmap immediately, so keep the previous
+    // frame visible before the animated transition starts.
+    drawPads(fromPads);
+
+    const startedAt = performance.now();
+    const renderFrame = (timestamp: number) => {
+      const colorProgress = Math.min((timestamp - startedAt) / COLOR_TRANSITION_MS, 1);
+      const selectionProgress = easeOutCubic(
+        Math.min((timestamp - startedAt) / SELECTION_TRANSITION_MS, 1)
+      );
+
+      const nextPads = targetPads.map((targetPad, index) => ({
+        localIndex: targetPad.localIndex,
+        variant: targetPad.variant,
+        rawColor: lerpColor(fromPads[index].rawColor, targetPad.rawColor, colorProgress),
+        selectionProgress: lerp(
+          fromPads[index].selectionProgress,
+          targetPad.selectionProgress,
+          selectionProgress
+        ),
+      }));
+
+      animatedPadsRef.current = nextPads;
+      drawPads(nextPads);
+
+      if (colorProgress < 1 || selectionProgress < 1) {
+        animationFrameRef.current = window.requestAnimationFrame(renderFrame);
+        return;
+      }
+
+      animationFrameRef.current = null;
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(renderFrame);
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [geometry, targetPads]);
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!geometry || !onColorSelect) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const localIndex = getPadIndexAtPoint(
+      event.clientX - bounds.left,
+      event.clientY - bounds.top,
+      geometry
+    );
+
+    if (localIndex === null) {
+      return;
+    }
+
+    onColorSelect(startIndex + localIndex);
   };
 
-  // Shadow syncs with display color
-  const svgFilter = (() => {
-    const size = isSelected ? 6 : 2;
-    return `drop-shadow(0 0 ${size}px ${displayColors.glow})`;
-  })();
+  let selectedPadLabel: { value: number; style: React.CSSProperties } | null = null;
+  if (
+    geometry &&
+    !isLightshowActive &&
+    selectedIndex !== undefined &&
+    selectedIndex >= startIndex &&
+    selectedIndex < startIndex + PADS_PER_HOUSING
+  ) {
+    const localIndex = selectedIndex - startIndex;
+    const rect = getPadRect(localIndex, geometry, SELECTED_SCALE);
+
+    selectedPadLabel = {
+      value: selectedIndex,
+      style: {
+        left: `${rect.centerX}px`,
+        top: `${rect.y + rect.size + LABEL_OFFSET_PX}px`,
+      },
+    };
+  }
 
   return (
-    <div
-      className={padClass}
-      style={padStyle}
-      onClick={() => onClick?.(index)}
-    >
-      <svg 
-        viewBox="-5 -5 110 110" 
-        style={{ filter: svgFilter }}
-      >
-        <defs>
-          <radialGradient id={gradientId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor={displayColors.core} className={styles.gradientStop} />
-            <stop offset="30%" stopColor={displayColors.core} className={styles.gradientStop} />
-            <stop offset="70%" stopColor={displayColors.mid} className={styles.gradientStop} />
-            <stop offset="100%" stopColor={displayColors.edge} className={styles.gradientStop} />
-          </radialGradient>
-        </defs>
-        
-        {/* LED */}
-        <path
-          d={pathD}
-          fill={`url(#${gradientId})`}
-          stroke={isSelected ? "#fff" : "none"}
-          strokeWidth={isSelected ? 4 : 0}
-          strokeLinejoin="round"
-        />
-
-        {/* Outline */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth="2"
-          pointerEvents="none"
-          style={{ 
-            clipPath: 'inset(1% 1% 2% 1%)',
-          }}
-        />
-      </svg>
-
-      {isSelected && !isLightshowActive && (
-        <div className={`${styles.padLabel} font-size-sm`}>
-          {index}
+    <div className={styles.housingContainer}>
+      <div className={styles.housing}>
+        <div ref={viewportRef} className={styles.canvasViewport}>
+          <canvas
+            ref={glowCanvasRef}
+            className={styles.glowCanvas}
+            aria-hidden="true"
+          />
+          <canvas
+            ref={canvasRef}
+            className={styles.canvas}
+            onClick={handleCanvasClick}
+          />
+          {selectedPadLabel && (
+            <div
+              className={`${styles.padLabel} font-size-sm`}
+              style={selectedPadLabel.style}
+            >
+              {selectedPadLabel.value}
+            </div>
+          )}
         </div>
-      )}
+      </div>
+      <div className={`${styles.housingLabel} text-code color-muted font-size-md`}>{title}</div>
     </div>
   );
 });
@@ -158,38 +525,30 @@ export const PaletteGrid = memo(({
   selectedIndex,
   onColorSelect,
   lightshowColors,
-  isLightshowActive
+  isLightshowActive,
 }: PaletteGridProps) => {
   const baseColors = palette.colors;
 
-  const mystrixHousing = useCallback((startIdx: number, title: string) => (
-    <div className={styles.housingContainer}>
-      <div className={styles.housing}>
-        <div className={styles.grid}>
-          {Array.from({ length: 64 }, (_, i) => {
-            const idx = startIdx + i;
-            return (
-              <Pad
-                key={idx}
-                index={idx}
-                baseColorData={baseColors[idx] || { r: 0, g: 0, b: 0 }}
-                lightshowColorData={lightshowColors ? lightshowColors.get(idx) : null}
-                isSelected={selectedIndex === idx}
-                onClick={onColorSelect}
-                isLightshowActive={isLightshowActive}
-              />
-            );
-          })}
-        </div>
-      </div>
-      <div className={`${styles.housingLabel} text-code color-muted font-size-md`}>{title}</div>
-    </div>
-  ), [baseColors, lightshowColors, selectedIndex, onColorSelect, isLightshowActive]);
-
   return (
-    <div className={`${styles.gridContainer} ${isLightshowActive ? styles.isLightshowActive : ''}`}>
-      {mystrixHousing(0, '0 - 63')}
-      {mystrixHousing(64, '64 - 127')}
+    <div className={styles.gridContainer}>
+      <HousingCanvas
+        title="0 - 63"
+        startIndex={0}
+        baseColors={baseColors}
+        selectedIndex={selectedIndex}
+        onColorSelect={onColorSelect}
+        lightshowColors={lightshowColors}
+        isLightshowActive={isLightshowActive}
+      />
+      <HousingCanvas
+        title="64 - 127"
+        startIndex={64}
+        baseColors={baseColors}
+        selectedIndex={selectedIndex}
+        onColorSelect={onColorSelect}
+        lightshowColors={lightshowColors}
+        isLightshowActive={isLightshowActive}
+      />
     </div>
   );
 });

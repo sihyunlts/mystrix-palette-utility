@@ -1,37 +1,3 @@
-.pad {
-  height: 100%;
-  aspect-ratio: 1 / 1;
-  position: relative;
-  transition: all 0.15s ease-out;
-  transform: scale(1);
-  z-index: 1;
-  will-change: transform, filter;
-}
-
-.pad.selected {
-  transform: scale(1.1);
-  z-index: 10;
-}
-
-.padLabel {
-  position: absolute;
-  bottom: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 2px;
-  white-space: nowrap;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-.gradientStop {
-  transition: stop-color 0.1s;
-}
-
 .housingContainer {
   text-align: center;
   flex: 1;
@@ -49,14 +15,38 @@
   aspect-ratio: 1 / 1;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  grid-template-rows: repeat(8, 1fr);
-  gap: 0.4%;
+.canvasViewport {
+  position: relative;
   width: 100%;
   height: 100%;
-  aspect-ratio: 1 / 1;
+}
+
+.glowCanvas,
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glowCanvas {
+  filter: blur(2px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.padLabel {
+  position: absolute;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 .housingLabel {
