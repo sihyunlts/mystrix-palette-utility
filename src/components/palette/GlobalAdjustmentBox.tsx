@@ -9,17 +9,26 @@ interface GlobalAdjustmentBoxProps {
   contrast: number;
   onSaturationChange: (val: number) => void;
   onContrastChange: (val: number) => void;
+  onReset?: () => void;
+  sliderShouldAnimate?: boolean;
 }
 
 export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({ 
   saturation, 
   contrast, 
   onSaturationChange, 
-  onContrastChange 
+  onContrastChange,
+  onReset,
+  sliderShouldAnimate = false,
 }) => {
   const { t } = useTranslation();
 
   const handleReset = () => {
+    if (onReset) {
+      onReset();
+      return;
+    }
+
     onSaturationChange(0);
     onContrastChange(0);
   };
@@ -42,6 +51,7 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
           max={100}
           onChange={onSaturationChange}
           valueDisplay={`${saturation > 0 ? '+' : ''}${saturation}%`}
+          animate={sliderShouldAnimate}
         />
         <Slider
           label={t('labels.contrast')}
@@ -50,6 +60,7 @@ export const GlobalAdjustmentBox: React.FC<GlobalAdjustmentBoxProps> = ({
           max={15}
           onChange={onContrastChange}
           valueDisplay={`${contrast > 0 ? '+' : ''}${contrast}%`}
+          animate={sliderShouldAnimate}
         />
       </div>
     </div>

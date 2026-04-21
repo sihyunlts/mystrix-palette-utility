@@ -8,6 +8,7 @@ interface SliderProps {
   onChange: (value: number) => void;
   label?: string;
   valueDisplay?: React.ReactNode;
+  animate?: boolean;
 }
 
 export const Slider: React.FC<SliderProps> = ({ 
@@ -16,7 +17,8 @@ export const Slider: React.FC<SliderProps> = ({
   max, 
   onChange, 
   label,
-  valueDisplay 
+  valueDisplay,
+  animate = false,
 }) => {
   const isChanged = value !== 0;
   const percentage = ((value - min) / (max - min)) * 100;
@@ -34,7 +36,10 @@ export const Slider: React.FC<SliderProps> = ({
       <div className={styles.sliderWrapper}>
          {/* Track */}
         <div className={styles.track}>
-           <div className={styles.fill} style={{ width: `${percentage}%` }} />
+           <div
+             className={`${styles.fill} ${animate ? styles.fillAnimated : ''}`}
+             style={{ width: `${percentage}%` }}
+           />
         </div>
         
         {/* Input */}
@@ -48,7 +53,10 @@ export const Slider: React.FC<SliderProps> = ({
         />
         
         {/* Thumb (Visual Only) */}
-        <div className={styles.thumb} style={{ left: `${percentage}%` }} />
+        <div
+          className={`${styles.thumb} ${animate ? styles.thumbAnimated : ''}`}
+          style={{ left: `${percentage}%` }}
+        />
       </div>
     </div>
   );

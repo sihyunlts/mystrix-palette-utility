@@ -18,6 +18,8 @@ import { HIDConnection as HIDManager } from './utils/hid';
 import { HIDConnection } from './components/backup/HIDConnection';
 import styles from './App.module.css';
 
+const SLIDER_RESET_TRANSITION_MS = 120;
+
 // Dynamic Preset Loader
 // Vite equivalent of require.context
 const presets = import.meta.glob('./presets/*', { query: '?url', eager: true });
@@ -243,6 +245,9 @@ const AppContent: React.FC = () => {
   // Global Adjustment State (Non-destructive)
   const [globalSaturation, setGlobalSaturation] = useState(0);
   const [globalContrast, setGlobalContrast] = useState(0);
+  const [previewTransitionsEnabled, setPreviewTransitionsEnabled] = useState(false);
+  const [sliderResetAnimating, setSliderResetAnimating] = useState(false);
+  const sliderResetTimeoutRef = useRef<number | null>(null);
 
   // Computed Palette with Global Adjustments
   const effectivePalette = useMemo(() => {
@@ -251,6 +256,26 @@ const AppContent: React.FC = () => {
         colors: applyGlobalSettings(palette.colors, globalSaturation, globalContrast)
     };
   }, [palette, globalSaturation, globalContrast]);
+
+  useEffect(() => {
+    return () => {
+      if (sliderResetTimeoutRef.current !== null) {
+        window.clearTimeout(sliderResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const animateSliderReset = useCallback(() => {
+    if (sliderResetTimeoutRef.current !== null) {
+      window.clearTimeout(sliderResetTimeoutRef.current);
+    }
+
+    setSliderResetAnimating(true);
+    sliderResetTimeoutRef.current = window.setTimeout(() => {
+      setSliderResetAnimating(false);
+      sliderResetTimeoutRef.current = null;
+    }, SLIDER_RESET_TRANSITION_MS);
+  }, []);
 
   const mapMIDINoteToPadIndex = useCallback((note: number): number | null => {
     return NOTE_TO_PAD_INDEX[note] ?? null;
@@ -306,10 +331,33 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleColorChange = useCallback((index: number, color: Color) => {
+    setPreviewTransitionsEnabled(false);
     setPalette(prev => ({
       ...prev,
       colors: prev.colors.map((c, i) => i === index ? color : c)
     }));
+  }, []);
+
+  const handleSaturationChange = useCallback((value: number) => {
+    setPreviewTransitionsEnabled(false);
+    setGlobalSaturation(value);
+  }, []);
+
+  const handleContrastChange = useCallback((value: number) => {
+    setPreviewTransitionsEnabled(false);
+    setGlobalContrast(value);
+  }, []);
+
+  const handleAdjustmentReset = useCallback(() => {
+    setPreviewTransitionsEnabled(true);
+    animateSliderReset();
+    setGlobalSaturation(0);
+    setGlobalContrast(0);
+  }, [animateSliderReset]);
+
+  const handlePadSelect = useCallback((index: number) => {
+    setPreviewTransitionsEnabled(false);
+    setSelectedColorIndex(prev => prev === index ? undefined : index);
   }, []);
 
   const handleUpload = async (slotId: number) => {
@@ -369,6 +417,7 @@ const AppContent: React.FC = () => {
 
     try {
       const colors = await loadPaletteFromFile(file);
+      setPreviewTransitionsEnabled(true);
       setPalette(prev => ({ ...prev, colors }));
       setGlobalSaturation(0);
       setGlobalContrast(0);
@@ -391,6 +440,7 @@ const AppContent: React.FC = () => {
         const response = await fetch(url);
         const data = await response.text();
         const colors = parsePaletteFile(data);
+        setPreviewTransitionsEnabled(true);
         setPalette({
             id: Date.now(),
             name: name,
@@ -541,9 +591,10 @@ const AppContent: React.FC = () => {
               <PaletteGrid
                 palette={effectivePalette}
                 selectedIndex={selectedColorIndex}
-                onColorSelect={(index) => setSelectedColorIndex(prev => prev === index ? undefined : index)}
+                onColorSelect={handlePadSelect}
                 lightshowColors={lightshowColors}
                 isLightshowActive={isLightshowActive}
+                animateTransitions={previewTransitionsEnabled && !isLightshowActive}
               />
 
               <div className={styles.controls}>
@@ -560,8 +611,10 @@ const AppContent: React.FC = () => {
                     <GlobalAdjustmentBox 
                       saturation={globalSaturation}
                       contrast={globalContrast}
-                      onSaturationChange={setGlobalSaturation}
-                      onContrastChange={setGlobalContrast}
+                      onSaturationChange={handleSaturationChange}
+                      onContrastChange={handleContrastChange}
+                      onReset={handleAdjustmentReset}
+                      sliderShouldAnimate={sliderResetAnimating}
                     />
                   </div>
                 )}

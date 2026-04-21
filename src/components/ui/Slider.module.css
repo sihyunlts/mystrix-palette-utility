@@ -47,6 +47,9 @@
 .fill {
   height: 100%;
   background-color: var(--color-primary);
+}
+
+.fillAnimated {
   transition: width 0.1s ease-out;
 }
 
@@ -70,5 +73,8 @@
   pointer-events: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   z-index: 1;
+}
+
+.thumbAnimated {
   transition: left 0.1s ease-out;
 }

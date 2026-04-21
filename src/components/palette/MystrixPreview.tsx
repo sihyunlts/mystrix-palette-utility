@@ -9,6 +9,7 @@ interface PaletteGridProps {
   onColorSelect?: (index: number) => void;
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
+  animateTransitions?: boolean;
 }
 
 interface HousingCanvasProps {
@@ -19,6 +20,7 @@ interface HousingCanvasProps {
   onColorSelect?: (index: number) => void;
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
+  animateTransitions?: boolean;
 }
 
 interface CanvasSize {
@@ -144,10 +146,12 @@ const lerpColor = (from: Color, to: Color, progress: number): Color => ({
   g: normalizeChannel(lerp(from.g, to.g, progress)),
   b: normalizeChannel(lerp(from.b, to.b, progress)),
 });
-const hasPadMotion = (from: RenderPad, to: RenderPad) => (
+const hasPadColorMotion = (from: RenderPad, to: RenderPad) => (
   from.rawColor.r !== to.rawColor.r ||
   from.rawColor.g !== to.rawColor.g ||
-  from.rawColor.b !== to.rawColor.b ||
+  from.rawColor.b !== to.rawColor.b
+);
+const hasPadSelectionMotion = (from: RenderPad, to: RenderPad) => (
   from.selectionProgress !== to.selectionProgress
 );
 
@@ -272,12 +276,14 @@ const HousingCanvas = memo(({
   onColorSelect,
   lightshowColors,
   isLightshowActive,
+  animateTransitions = false,
 }: HousingCanvasProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animatedPadsRef = useRef<RenderPad[] | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const previousLightshowActiveRef = useRef(isLightshowActive);
   const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -373,12 +379,21 @@ const HousingCanvas = memo(({
     const fromPads = animatedPadsRef.current?.length === targetPads.length
       ? animatedPadsRef.current
       : targetPads;
+    const didLightshowStateChange = previousLightshowActiveRef.current !== isLightshowActive;
+    const shouldAnimateColor = animateTransitions || didLightshowStateChange;
+    const shouldAnimateSelection = fromPads.some((pad, index) => (
+      hasPadSelectionMotion(pad, targetPads[index])
+    ));
+    previousLightshowActiveRef.current = isLightshowActive;
+    const shouldAnimate = shouldAnimateColor || shouldAnimateSelection;
 
     if (animationFrameRef.current !== null) {
       window.cancelAnimationFrame(animationFrameRef.current);
     }
 
-    if (!fromPads.some((pad, index) => hasPadMotion(pad, targetPads[index]))) {
+    if (!shouldAnimate || !fromPads.some((pad, index) => (
+      hasPadColorMotion(pad, targetPads[index]) || hasPadSelectionMotion(pad, targetPads[index])
+    ))) {
       animatedPadsRef.current = targetPads;
       drawPads(targetPads);
       return;
@@ -398,18 +413,25 @@ const HousingCanvas = memo(({
       const nextPads = targetPads.map((targetPad, index) => ({
         localIndex: targetPad.localIndex,
         variant: targetPad.variant,
-        rawColor: lerpColor(fromPads[index].rawColor, targetPad.rawColor, colorProgress),
-        selectionProgress: lerp(
-          fromPads[index].selectionProgress,
-          targetPad.selectionProgress,
-          selectionProgress
-        ),
+        rawColor: shouldAnimateColor
+          ? lerpColor(fromPads[index].rawColor, targetPad.rawColor, colorProgress)
+          : targetPad.rawColor,
+        selectionProgress: shouldAnimateSelection
+          ? lerp(
+              fromPads[index].selectionProgress,
+              targetPad.selectionProgress,
+              selectionProgress
+            )
+          : targetPad.selectionProgress,
       }));
 
       animatedPadsRef.current = nextPads;
       drawPads(nextPads);
 
-      if (colorProgress < 1 || selectionProgress < 1) {
+      if (
+        (shouldAnimateColor && colorProgress < 1) ||
+        (shouldAnimateSelection && selectionProgress < 1)
+      ) {
         animationFrameRef.current = window.requestAnimationFrame(renderFrame);
         return;
       }
@@ -425,7 +447,7 @@ const HousingCanvas = memo(({
         animationFrameRef.current = null;
       }
     };
-  }, [geometry, targetPads]);
+  }, [animateTransitions, geometry, isLightshowActive, targetPads]);
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!geometry || !onColorSelect) {
@@ -501,6 +523,7 @@ export const PaletteGrid = memo(({
   onColorSelect,
   lightshowColors,
   isLightshowActive,
+  animateTransitions = false,
 }: PaletteGridProps) => {
   const baseColors = palette.colors;
 
@@ -514,6 +537,7 @@ export const PaletteGrid = memo(({
         onColorSelect={onColorSelect}
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
+        animateTransitions={animateTransitions}
       />
       <HousingCanvas
         title="64 - 127"
@@ -523,6 +547,7 @@ export const PaletteGrid = memo(({
         onColorSelect={onColorSelect}
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
+        animateTransitions={animateTransitions}
       />
     </div>
   );
