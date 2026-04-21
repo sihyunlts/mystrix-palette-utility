@@ -41,16 +41,22 @@ export const hslToRgb = (h: number, s: number, l: number): Color => {
     };
 };
 
-export const applyGlobalSettings = (colors: Color[], saturation: number, contrast: number): Color[] => {
-    if (saturation === 0 && contrast === 0) return colors;
+export const applyGlobalSettings = (
+    colors: Color[],
+    saturation: number,
+    contrast: number,
+    hueShift: number
+): Color[] => {
+    if (saturation === 0 && contrast === 0 && hueShift === 0) return colors;
 
     return colors.map((c, i) => {
         if (!c) return { r: 0, g: 0, b: 0 };
         // Skip off LEDs - they should not be affected by contrast
         if (c.r === 0 && c.g === 0 && c.b === 0) return c;
         
-        // 1. Apply Saturation (HSL)
+        // 1. Apply Hue + Saturation (HSL)
         let { h, s, l } = rgbToHsl(c.r, c.g, c.b);
+        h += hueShift;
         const satFactor = 1 + (saturation / 100);
         s = Math.max(0, Math.min(1, s * satFactor));
         let rgb = hslToRgb(h, s, l);

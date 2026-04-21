@@ -34,9 +34,11 @@ export const zh = {
     },
     labels: {
       saturationAndContrast: "色度及对比度",
+      hueShift: "色相偏移",
       slot: "插槽",
       selectedPad: "已选打击垫",
       rgbValue: "RGB 值",
+      hue: "色相",
       saturation: "色度",
       contrast: "对比度",
       status: "状态",

@@ -117,7 +117,16 @@
   min-width: 0;
 }
 
+.controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--spacing-xl);
+  margin-top: var(--spacing-2xl);
+}
+
 .globalAdjustmentWrapper {
+  flex: 1 1 360px;
   display: flex;
 }
 

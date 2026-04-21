@@ -8,6 +8,7 @@ import { DropdownButton } from './components/ui/DropdownButton';
 import { Button } from './components/ui/Button';
 import { ModalProvider, useModal } from './components/ui/Modal';
 import { GlobalAdjustmentBox } from './components/palette/GlobalAdjustmentBox';
+import { HueAdjustmentBox } from './components/palette/HueAdjustmentBox';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './utils/paletteFile';
 import { applyGlobalSettings } from './utils/colorUtils';
@@ -244,6 +245,7 @@ const AppContent: React.FC = () => {
   // Global Adjustment State (Non-destructive)
   const [globalSaturation, setGlobalSaturation] = useState(0);
   const [globalContrast, setGlobalContrast] = useState(0);
+  const [globalHueShift, setGlobalHueShift] = useState(0);
   const [previewTransitionsEnabled, setPreviewTransitionsEnabled] = useState(false);
   const [sliderResetAnimating, setSliderResetAnimating] = useState(false);
   const sliderResetTimeoutRef = useRef<number | null>(null);
@@ -252,9 +254,9 @@ const AppContent: React.FC = () => {
   const effectivePalette = useMemo(() => {
     return {
         ...palette,
-        colors: applyGlobalSettings(palette.colors, globalSaturation, globalContrast)
+        colors: applyGlobalSettings(palette.colors, globalSaturation, globalContrast, globalHueShift)
     };
-  }, [palette, globalSaturation, globalContrast]);
+  }, [palette, globalSaturation, globalContrast, globalHueShift]);
 
   useEffect(() => {
     return () => {
@@ -347,11 +349,22 @@ const AppContent: React.FC = () => {
     setGlobalContrast(value);
   }, []);
 
+  const handleHueShiftChange = useCallback((value: number) => {
+    setPreviewTransitionsEnabled(false);
+    setGlobalHueShift(value);
+  }, []);
+
   const handleAdjustmentReset = useCallback(() => {
     setPreviewTransitionsEnabled(true);
     animateSliderReset();
     setGlobalSaturation(0);
     setGlobalContrast(0);
+  }, [animateSliderReset]);
+
+  const handleHueReset = useCallback(() => {
+    setPreviewTransitionsEnabled(true);
+    animateSliderReset();
+    setGlobalHueShift(0);
   }, [animateSliderReset]);
 
   const handlePadSelect = useCallback((index: number) => {
@@ -428,6 +441,7 @@ const AppContent: React.FC = () => {
       setPalette(prev => ({ ...prev, colors }));
       setGlobalSaturation(0);
       setGlobalContrast(0);
+      setGlobalHueShift(0);
     } catch (error) {
       showModal({
         title: t('messages.loadFailed'),
@@ -456,6 +470,7 @@ const AppContent: React.FC = () => {
         });
         setGlobalSaturation(0);
         setGlobalContrast(0);
+        setGlobalHueShift(0);
         setSelectedColorIndex(undefined);
     } catch (error) {
         showModal({
@@ -609,9 +624,9 @@ const AppContent: React.FC = () => {
                 animateTransitions={previewTransitionsEnabled && !isLightshowActive}
               />
 
-              {globalSaturation !== undefined && globalContrast !== undefined && (
+              <div className={styles.controls}>
                 <div className={styles.globalAdjustmentWrapper}>
-                  <GlobalAdjustmentBox 
+                  <GlobalAdjustmentBox
                     saturation={globalSaturation}
                     contrast={globalContrast}
                     onSaturationChange={handleSaturationChange}
@@ -620,7 +635,15 @@ const AppContent: React.FC = () => {
                     sliderShouldAnimate={sliderResetAnimating}
                   />
                 </div>
-              )}
+                <div className={styles.globalAdjustmentWrapper}>
+                  <HueAdjustmentBox
+                    hueShift={globalHueShift}
+                    onHueShiftChange={handleHueShiftChange}
+                    onReset={handleHueReset}
+                    sliderShouldAnimate={sliderResetAnimating}
+                  />
+                </div>
+              </div>
 
               <div className={styles.actionBar}>
                 <div className={styles.actionGroup}>

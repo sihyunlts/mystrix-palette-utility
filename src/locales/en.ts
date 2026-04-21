@@ -34,9 +34,11 @@ export const en = {
     },
     labels: {
       saturationAndContrast: "Saturation & Contrast",
+      hueShift: "Hue Shift",
       slot: "Slot",
       selectedPad: "Selected Pad",
       rgbValue: "RGB Value",
+      hue: "Hue",
       saturation: "Saturation",
       contrast: "Contrast",
       status: "Status",

@@ -34,9 +34,11 @@ export const ko = {
     },
     labels: {
       saturationAndContrast: "채도 및 대비",
+      hueShift: "색조 이동",
       slot: "슬롯",
       selectedPad: "선택된 패드",
       rgbValue: "RGB 값",
+      hue: "색조",
       saturation: "채도",
       contrast: "대비",
       status: "상태",
