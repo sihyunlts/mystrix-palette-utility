@@ -20,6 +20,8 @@
   cursor: crosshair;
   border-radius: 2px;
   overflow: hidden;
+  touch-action: none;
+  user-select: none;
 }
 
 .slGradient {
@@ -48,6 +50,8 @@
   cursor: pointer;
   position: relative;
   border-radius: 8px;
+  touch-action: none;
+  user-select: none;
 }
 
 .hueCursor {
@@ -96,4 +100,3 @@
   -webkit-appearance: none;
   margin: 0;
 }
-
