@@ -5,6 +5,7 @@ import styles from './ColorPicker.module.css';
 interface ColorPickerProps {
   color: Color;
   onChange: (color: Color) => void;
+  onInteractionChange?: (isInteracting: boolean) => void;
 }
 
 interface HsvDraft {
@@ -106,6 +107,7 @@ const syncDraftFromColor = (color: Color, fallbackHue: number): HsvDraft => {
 export const ColorPicker: React.FC<ColorPickerProps> = ({
   color,
   onChange,
+  onInteractionChange,
 }) => {
   const [draft, setDraft] = useState<HsvDraft>(() => syncDraftFromColor(color, 0));
   const isInteractingRef = useRef(false);
@@ -127,6 +129,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     draftRef.current = nextDraft;
     setDraft(nextDraft);
   }, [color]);
+
+  useEffect(() => (
+    () => onInteractionChange?.(false)
+  ), [onInteractionChange]);
 
   const updateDraft = (nextDraft: HsvDraft) => {
     draftRef.current = nextDraft;
@@ -169,6 +175,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     isInteractingRef.current = true;
+    onInteractionChange?.(true);
     activeControlRef.current = control;
     activePointerIdRef.current = event.pointerId;
 
@@ -220,6 +227,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     }
 
     isInteractingRef.current = false;
+    onInteractionChange?.(false);
     activeControlRef.current = null;
     activePointerIdRef.current = null;
   };

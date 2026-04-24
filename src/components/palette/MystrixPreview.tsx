@@ -39,6 +39,7 @@ interface HousingCanvasProps {
   lightshowColors?: Map<number, Color>;
   isLightshowActive?: boolean;
   animateTransitions?: boolean;
+  hideSelectedLabel?: boolean;
 }
 
 interface CanvasSize {
@@ -109,6 +110,7 @@ const GAP_RATIO = 0.004;
 const SELECTED_SCALE = 1.1;
 const COLOR_TRANSITION_MS = 100;
 const SELECTION_TRANSITION_MS = 150;
+const PAD_LABEL_TRANSITION_MS = 120;
 
 const OFF_COLOR: Color = { r: 0, g: 0, b: 0 };
 
@@ -318,6 +320,7 @@ const HousingCanvas = memo(({
   lightshowColors,
   isLightshowActive,
   animateTransitions = false,
+  hideSelectedLabel = false,
 }: HousingCanvasProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -326,6 +329,7 @@ const HousingCanvas = memo(({
   const animationFrameRef = useRef<number | null>(null);
   const previousLightshowActiveRef = useRef(isLightshowActive);
   const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const [renderedPadLabel, setRenderedPadLabel] = useState<PadLabel | null>(null);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -558,6 +562,25 @@ const HousingCanvas = memo(({
     });
   }, [gridRef, onPickerAnchorChange, selectedPadMeta, startIndex]);
 
+  useEffect(() => {
+    if (selectedPadMeta?.label) {
+      setRenderedPadLabel(selectedPadMeta.label);
+      return;
+    }
+
+    if (!renderedPadLabel) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setRenderedPadLabel(null);
+    }, PAD_LABEL_TRANSITION_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [renderedPadLabel, selectedPadMeta]);
+
+  const padLabelVisible = Boolean(selectedPadMeta?.label && !hideSelectedLabel);
+
   return (
     <div className={styles.housingContainer}>
       <div className={styles.housing}>
@@ -572,12 +595,12 @@ const HousingCanvas = memo(({
             className={styles.canvas}
             onClick={handleCanvasClick}
           />
-          {selectedPadMeta?.label && (
+          {renderedPadLabel && (
             <div
-              className={`${styles.padLabel} font-size-sm`}
-              style={selectedPadMeta.label.style}
+              className={`${styles.padLabel} ${padLabelVisible ? styles.padLabelVisible : ''} font-size-sm`}
+              style={renderedPadLabel.style}
             >
-              {selectedPadMeta.label.value}
+              {renderedPadLabel.value}
             </div>
           )}
         </div>
@@ -604,6 +627,7 @@ export const PaletteGrid = memo(({
   const [pickerAnchor, setPickerAnchor] = useState<PickerAnchor | null>(null);
   const [renderedPicker, setRenderedPicker] = useState<RenderedPickerState | null>(null);
   const [animatePickerMove, setAnimatePickerMove] = useState(false);
+  const [isPickerInteracting, setIsPickerInteracting] = useState(false);
   const activeHousingStart = selectedIndex !== undefined && selectedIndex >= PADS_PER_HOUSING
     ? PADS_PER_HOUSING
     : 0;
@@ -691,6 +715,12 @@ export const PaletteGrid = memo(({
     }
   }, [isMounted, pickerAnchor, selectedColor, selectedIndex]);
 
+  useEffect(() => {
+    if (selectedIndex === undefined || isLightshowActive) {
+      setIsPickerInteracting(false);
+    }
+  }, [isLightshowActive, selectedIndex]);
+
   useLayoutEffect(() => {
     if (!pickerAnchor) {
       return;
@@ -737,6 +767,7 @@ export const PaletteGrid = memo(({
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
         animateTransitions={animateTransitions}
+        hideSelectedLabel={isPickerInteracting}
       />
       <HousingCanvas
         title="64 - 127"
@@ -750,6 +781,7 @@ export const PaletteGrid = memo(({
         lightshowColors={lightshowColors}
         isLightshowActive={isLightshowActive}
         animateTransitions={animateTransitions}
+        hideSelectedLabel={isPickerInteracting}
       />
       {displayedPicker && (
         <div
@@ -777,6 +809,7 @@ export const PaletteGrid = memo(({
               <ColorPicker
                 color={displayedPicker.color}
                 onChange={onSelectedColorChange}
+                onInteractionChange={setIsPickerInteracting}
               />
             </div>
           </div>
