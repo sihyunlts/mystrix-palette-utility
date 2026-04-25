@@ -137,31 +137,49 @@ export const useLightshow = (
         (uiEvents: UILightshowEvent[]) => {
           if (playbackId !== currentPlaybackIdRef.current) return;
 
+          const colorUpdates = uiEvents.reduce<Array<{
+            mapped: number;
+            mirrorIndex: number;
+            color: Color | null;
+          }>>((updates, event) => {
+            const mapped = mapMIDINoteToPadIndex(event.index);
+            if (mapped === null) {
+              return updates;
+            }
+
+            const mirrorIndex = mapped + 64;
+
+            if (event.velocity > 0) {
+              const color = activePaletteColors[event.velocity] || { r: 255, g: 255, b: 255 };
+              activePadCounts.set(mapped, (activePadCounts.get(mapped) || 0) + 1);
+              updates.push({ mapped, mirrorIndex, color });
+              return updates;
+            }
+
+            const newCount = Math.max(0, (activePadCounts.get(mapped) || 0) - 1);
+            activePadCounts.set(mapped, newCount);
+
+            if (newCount <= 0) {
+              updates.push({ mapped, mirrorIndex, color: null });
+            }
+            return updates;
+          }, []);
+
+          if (colorUpdates.length === 0) {
+            return;
+          }
+
           setLightshowColors(prev => {
             const next = new Map(prev);
-            uiEvents.forEach(event => {
-              const mapped = mapMIDINoteToPadIndex(event.index);
-              if (mapped === null) return;
-              
-              if (event.velocity > 0) {
-                // Use the determined active palette logic
-                const color = activePaletteColors[event.velocity] || { r: 255, g: 255, b: 255 };
+            colorUpdates.forEach(({ mapped, mirrorIndex, color }) => {
+              if (color) {
                 next.set(mapped, color);
-                next.set(mapped + 64, color);
-
-                // Track polyphony
-                const currentCount = activePadCounts.get(mapped) || 0;
-                activePadCounts.set(mapped, currentCount + 1);
-              } else {
-                const currentCount = activePadCounts.get(mapped) || 0;
-                const newCount = Math.max(0, currentCount - 1);
-                activePadCounts.set(mapped, newCount);
-
-                if (newCount <= 0) {
-                  next.delete(mapped);
-                  next.delete(mapped + 64);
-                }
+                next.set(mirrorIndex, color);
+                return;
               }
+
+              next.delete(mapped);
+              next.delete(mirrorIndex);
             });
             return next;
           });
