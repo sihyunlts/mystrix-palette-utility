@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
@@ -14,6 +14,7 @@ import { loadPaletteFromFile, savePaletteToFile, parsePaletteFile } from './util
 import { applyGlobalSettings } from './utils/colorUtils';
 import { FACTORY_PALETTE_COLORS, FACTORY_PALETTE_NAME } from './utils/factoryPalette';
 import { useLightshow } from './hooks/useLightshow';
+import { useLivePalettePreview } from './hooks/useLivePalettePreview';
 import { BackupRestore } from './components/backup/BackupRestore';
 import { HIDConnection as HIDManager } from './utils/hid';
 import { HIDConnection } from './components/backup/HIDConnection';
@@ -21,7 +22,6 @@ import { toMystrixPreviewIndex, toMystrixSysexTarget } from './utils/mystrixLayo
 import styles from './App.module.css';
 
 const SLIDER_RESET_TRANSITION_MS = 120;
-const LIVE_PALETTE_PREVIEW_DEBOUNCE_MS = 80;
 
 // Dynamic Preset Loader
 // Vite equivalent of require.context
@@ -47,11 +47,6 @@ const AppContent: React.FC = () => {
   const { showModal } = useModal();
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<MIDIOutput | null>(null);
-  const [livePreviewStartIndex, setLivePreviewStartIndex] = useState(0);
-  const livePreviewTimeoutRef = useRef<number | null>(null);
-  const livePreviewWindowStartRef = useRef<number | null>(null);
-  const livePreviewMatrixOSRef = useRef<MatrixOSMIDI | null>(null);
-  const wasLightshowActiveRef = useRef(false);
   
   // Use URL hash for routing (default to 'palette' if empty or invalid)
   const [currentPage, setCurrentPage] = useState<'palette' | 'backup'>(() => {
@@ -143,67 +138,16 @@ const AppContent: React.FC = () => {
     playLightshow 
   } = useLightshow(matrixOS, effectivePalette, toMystrixPreviewIndex, toMystrixSysexTarget);
 
-  useLayoutEffect(() => {
-    if (livePreviewTimeoutRef.current !== null) {
-      window.clearTimeout(livePreviewTimeoutRef.current);
-      livePreviewTimeoutRef.current = null;
-    }
-
-    if (isLightshowActive) {
-      wasLightshowActiveRef.current = true;
-      return;
-    }
-
-    if (!matrixOS || currentPage !== 'palette') {
-      return;
-    }
-
-    const forceFull =
-      livePreviewWindowStartRef.current !== livePreviewStartIndex ||
-      livePreviewMatrixOSRef.current !== matrixOS ||
-      wasLightshowActiveRef.current;
-    const animateTransitions = previewTransitionsEnabled || wasLightshowActiveRef.current;
-
-    const previewDelay = animateTransitions || forceFull ? 0 : LIVE_PALETTE_PREVIEW_DEBOUNCE_MS;
-
-    const sendLivePreview = () => {
-      try {
-        matrixOS.previewPaletteWindow(
-          livePreviewStartIndex,
-          effectivePalette.colors,
-          forceFull,
-          animateTransitions
-        );
-        livePreviewWindowStartRef.current = livePreviewStartIndex;
-        livePreviewMatrixOSRef.current = matrixOS;
-        wasLightshowActiveRef.current = false;
-      } catch (error) {
-        console.warn('Failed to send live palette preview:', error);
-      } finally {
-        livePreviewTimeoutRef.current = null;
-      }
-    };
-
-    if (previewDelay === 0) {
-      sendLivePreview();
-    } else {
-      livePreviewTimeoutRef.current = window.setTimeout(sendLivePreview, previewDelay);
-    }
-
-    return () => {
-      if (livePreviewTimeoutRef.current !== null) {
-        window.clearTimeout(livePreviewTimeoutRef.current);
-        livePreviewTimeoutRef.current = null;
-      }
-    };
-  }, [
-    currentPage,
-    effectivePalette.colors,
-    isLightshowActive,
-    livePreviewStartIndex,
+  const {
+    previewColor: previewPaletteColor,
+    setPreviewWindowForIndex,
+  } = useLivePalettePreview({
     matrixOS,
-    previewTransitionsEnabled,
-  ]);
+    colors: effectivePalette.colors,
+    currentPage,
+    isLightshowActive,
+    animateTransitions: previewTransitionsEnabled,
+  });
 
 
   const connectionEpochRef = useRef<number>(0);
@@ -239,11 +183,18 @@ const AppContent: React.FC = () => {
 
   const handleColorChange = useCallback((index: number, color: Color) => {
     setPreviewTransitionsEnabled(false);
+    const previewColor = applyGlobalSettings(
+      [color],
+      globalSaturation,
+      globalContrast,
+      globalHueShift
+    )[0];
+    previewPaletteColor(index, previewColor);
     setPalette(prev => ({
       ...prev,
       colors: prev.colors.map((c, i) => i === index ? color : c)
     }));
-  }, []);
+  }, [globalContrast, globalHueShift, globalSaturation, previewPaletteColor]);
 
   const handleSaturationChange = useCallback((value: number) => {
     setPreviewTransitionsEnabled(false);
@@ -275,9 +226,9 @@ const AppContent: React.FC = () => {
 
   const handlePadSelect = useCallback((index: number) => {
     setPreviewTransitionsEnabled(false);
-    setLivePreviewStartIndex(index >= 64 ? 64 : 0);
+    setPreviewWindowForIndex(index);
     setSelectedColorIndex(prev => prev === index ? undefined : index);
-  }, []);
+  }, [setPreviewWindowForIndex]);
 
   const handlePadDismiss = useCallback(() => {
     setSelectedColorIndex(undefined);

@@ -195,6 +195,38 @@ export class MatrixOSMIDI {
     );
   }
 
+  previewPaletteColor(index: number, color: Color): void {
+    const normalizedStartIndex = index >= MatrixOSMIDI.PREVIEW_WINDOW_SIZE
+      ? MatrixOSMIDI.PREVIEW_WINDOW_SIZE
+      : 0;
+    const localIndex = index - normalizedStartIndex;
+
+    if (localIndex < 0 || localIndex >= MatrixOSMIDI.PREVIEW_WINDOW_SIZE) {
+      return;
+    }
+
+    if (
+      this.lastPreviewStartIndex !== null &&
+      this.lastPreviewStartIndex !== normalizedStartIndex
+    ) {
+      return;
+    }
+
+    const nextColor = normalizeColor(color);
+    this.cancelPreviewTransition();
+    this.sendDirectLedPreviewFrame([{
+      target: this.previewTargetFromLocalIndex(localIndex),
+      color: nextColor,
+    }]);
+
+    this.lastPreviewStartIndex = normalizedStartIndex;
+    const nextPreviewColors = this.lastPreviewColors.length === MatrixOSMIDI.PREVIEW_WINDOW_SIZE
+      ? [...this.lastPreviewColors]
+      : Array.from({ length: MatrixOSMIDI.PREVIEW_WINDOW_SIZE }, () => MatrixOSMIDI.OFF_COLOR);
+    nextPreviewColors[localIndex] = nextColor;
+    this.lastPreviewColors = nextPreviewColors;
+  }
+
   previewPaletteWindow(startIndex: number, colors: Color[], forceFull = false, animateTransitions = false): void {
     const normalizedStartIndex = startIndex >= MatrixOSMIDI.PREVIEW_WINDOW_SIZE
       ? MatrixOSMIDI.PREVIEW_WINDOW_SIZE
