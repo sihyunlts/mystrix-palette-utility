@@ -16,6 +16,7 @@ import { useLightshow } from './hooks/useLightshow';
 import { BackupRestore } from './components/backup/BackupRestore';
 import { HIDConnection as HIDManager } from './utils/hid';
 import { HIDConnection } from './components/backup/HIDConnection';
+import { toMystrixPreviewIndex } from './utils/mystrixLayout';
 import styles from './App.module.css';
 
 const SLIDER_RESET_TRANSITION_MS = 120;
@@ -169,18 +170,6 @@ const DEFAULT_PALETTE_COLORS = parsePaletteFile(
 126, 44 23 0;
 127, 18 5 0;`);
 
-const NOTE_TO_PAD_INDEX: Record<number, number> = (() => {
-  const map: Record<number, number> = {};
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const calNote = c < 4 ? (36 + (7 - r) * 4 + c) : (68 + (7 - r) * 4 + (c - 4));
-      map[calNote] = r * 8 + c;
-    }
-  }
-  return map;
-})();
-
-
 const AppContent: React.FC = () => {
     const { t, i18n } = useTranslation();
 
@@ -279,7 +268,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   const mapMIDINoteToPadIndex = useCallback((note: number): number | null => {
-    return NOTE_TO_PAD_INDEX[note] ?? null;
+    return toMystrixPreviewIndex(note);
   }, []);
 
   /* 

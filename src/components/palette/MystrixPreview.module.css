@@ -5,7 +5,13 @@
   max-width: 480px;
 }
 
+.housingShell {
+  position: relative;
+}
+
 .housing {
+  position: relative;
+  z-index: 1;
   background-color: var(--color-mystrix-surface);
   padding: 3.4%;
   border-radius: var(--radius-main);
@@ -13,6 +19,16 @@
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), var(--shadow-mystrix);
   width: 100%;
   aspect-ratio: 1 / 1;
+}
+
+.underLightCanvas {
+  position: absolute;
+  inset: -4.5%;
+  width: 109%;
+  height: 109%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(12px);
 }
 
 .canvasViewport {
@@ -31,6 +47,7 @@
 
 .glowCanvas {
   filter: blur(2px);
+  mix-blend-mode: screen;
   opacity: 0.9;
   pointer-events: none;
 }

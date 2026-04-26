@@ -14,6 +14,13 @@ import { Color, Palette } from '../../types';
 import styles from './MystrixPreview.module.css';
 import { ColorPicker } from './ColorPicker';
 import { getPreviewDisplayColors } from './previewDisplay';
+import {
+  MYSTRIX_GRID_SIZE,
+  MYSTRIX_PADS_PER_HOUSING,
+  MYSTRIX_UNDER_LIGHT_SIDES,
+  toUnderLightPreviewIndex,
+} from '../../utils/mystrixLayout';
+import type { MystrixUnderLightSide } from '../../utils/mystrixLayout';
 
 interface PaletteGridProps {
   palette: Palette;
@@ -76,6 +83,12 @@ interface RenderPad {
   selectionProgress: number;
 }
 
+interface RenderUnderLight {
+  side: MystrixUnderLightSide;
+  position: number;
+  rawColor: Color;
+}
+
 interface PickerAnchor {
   left: number;
   top: number;
@@ -104,13 +117,14 @@ type PadVariant =
   | 'topRightChamfer'
   | 'topLeftChamfer';
 
-const GRID_SIZE = 8;
-const PADS_PER_HOUSING = GRID_SIZE * GRID_SIZE;
 const GAP_RATIO = 0.004;
 const SELECTED_SCALE = 1.1;
 const COLOR_TRANSITION_MS = 100;
 const SELECTION_TRANSITION_MS = 150;
 const PAD_LABEL_TRANSITION_MS = 120;
+const UNDER_LIGHT_LENGTH_RATIO = 1;
+const UNDER_LIGHT_THICKNESS_RATIO = 0.03;
+const UNDER_LIGHT_SIDE_CENTER = 0.055;
 
 const OFF_COLOR: Color = { r: 0, g: 0, b: 0 };
 
@@ -186,7 +200,10 @@ const lerpColor = (from: Color, to: Color, progress: number): Color => ({
   g: normalizeChannel(lerp(from.g, to.g, progress)),
   b: normalizeChannel(lerp(from.b, to.b, progress)),
 });
-const hasPadColorMotion = (from: RenderPad, to: RenderPad) => (
+const hasColorMotion = (
+  from: { rawColor: Color },
+  to: { rawColor: Color }
+) => (
   from.rawColor.r !== to.rawColor.r ||
   from.rawColor.g !== to.rawColor.g ||
   from.rawColor.b !== to.rawColor.b
@@ -194,7 +211,29 @@ const hasPadColorMotion = (from: RenderPad, to: RenderPad) => (
 const hasPadSelectionMotion = (from: RenderPad, to: RenderPad) => (
   from.selectionProgress !== to.selectionProgress
 );
+const resizeCanvas = (
+  canvas: HTMLCanvasElement,
+  width: number,
+  height: number,
+  dpr: number
+) => {
+  const pixelWidth = Math.max(1, Math.round(width * dpr));
+  const pixelHeight = Math.max(1, Math.round(height * dpr));
 
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
+};
+const clearCanvas = (
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  dpr: number
+) => {
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+};
 const createHousingGeometry = (width: number, height: number): HousingGeometry | null => {
   if (width <= 0 || height <= 0) {
     return null;
@@ -204,7 +243,7 @@ const createHousingGeometry = (width: number, height: number): HousingGeometry |
   const offsetX = (width - size) / 2;
   const offsetY = (height - size) / 2;
   const gap = size * GAP_RATIO;
-  const cellSize = (size - gap * (GRID_SIZE - 1)) / GRID_SIZE;
+  const cellSize = (size - gap * (MYSTRIX_GRID_SIZE - 1)) / MYSTRIX_GRID_SIZE;
 
   return {
     size,
@@ -216,8 +255,8 @@ const createHousingGeometry = (width: number, height: number): HousingGeometry |
 };
 
 const getPadRect = (localIndex: number, geometry: HousingGeometry, scale = 1): PadRect => {
-  const column = localIndex % GRID_SIZE;
-  const row = Math.floor(localIndex / GRID_SIZE);
+  const column = localIndex % MYSTRIX_GRID_SIZE;
+  const row = Math.floor(localIndex / MYSTRIX_GRID_SIZE);
   const drawSize = geometry.cellSize * scale;
   const x = geometry.offsetX + column * geometry.step + (geometry.cellSize - drawSize) / 2;
   const y = geometry.offsetY + row * geometry.step + (geometry.cellSize - drawSize) / 2;
@@ -242,7 +281,7 @@ const getPadIndexAtPoint = (x: number, y: number, geometry: HousingGeometry) => 
   const column = Math.floor(localX / geometry.step);
   const row = Math.floor(localY / geometry.step);
 
-  if (column < 0 || column >= GRID_SIZE || row < 0 || row >= GRID_SIZE) {
+  if (column < 0 || column >= MYSTRIX_GRID_SIZE || row < 0 || row >= MYSTRIX_GRID_SIZE) {
     return null;
   }
 
@@ -253,7 +292,7 @@ const getPadIndexAtPoint = (x: number, y: number, geometry: HousingGeometry) => 
     return null;
   }
 
-  return row * GRID_SIZE + column;
+  return row * MYSTRIX_GRID_SIZE + column;
 };
 
 const drawPadGlow = (context: CanvasRenderingContext2D, pad: RenderPad, geometry: HousingGeometry) => {
@@ -308,6 +347,43 @@ const drawPadBody = (context: CanvasRenderingContext2D, pad: RenderPad, geometry
   context.restore();
 };
 
+const drawUnderLightSegment = (
+  context: CanvasRenderingContext2D,
+  side: MystrixUnderLightSide,
+  position: number,
+  color: Color,
+  geometry: HousingGeometry,
+  viewportSize: CanvasSize,
+  width: number,
+  height: number
+) => {
+  if (isOffColor(color)) {
+    return;
+  }
+
+  const isHorizontal = side === 'top' || side === 'bottom';
+  const isNearSide = side === 'top' || side === 'left';
+  const padRect = getPadRect(isHorizontal ? position : position * MYSTRIX_GRID_SIZE, geometry);
+  const length = geometry.cellSize * UNDER_LIGHT_LENGTH_RATIO;
+  const thickness = (isHorizontal ? height : width) * UNDER_LIGHT_THICKNESS_RATIO;
+  const alongCenter = (isHorizontal ? width - viewportSize.width : height - viewportSize.height) / 2 +
+    (isHorizontal ? padRect.centerX : padRect.centerY);
+  const sideCenter = (isNearSide ? UNDER_LIGHT_SIDE_CENTER : 1 - UNDER_LIGHT_SIDE_CENTER) *
+    (isHorizontal ? height : width);
+
+  const x = isHorizontal ? alongCenter - length / 2 : sideCenter - thickness / 2;
+  const y = isHorizontal ? sideCenter - thickness / 2 : alongCenter - length / 2;
+  const segmentWidth = isHorizontal ? length : thickness;
+  const segmentHeight = isHorizontal ? thickness : length;
+
+  context.save();
+  context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
+  context.beginPath();
+  context.roundRect(x, y, segmentWidth, segmentHeight, Math.min(segmentWidth, segmentHeight) / 2);
+  context.fill();
+  context.restore();
+};
+
 const HousingCanvas = memo(({
   title,
   startIndex,
@@ -323,9 +399,11 @@ const HousingCanvas = memo(({
   hideSelectedLabel = false,
 }: HousingCanvasProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const underLightCanvasRef = useRef<HTMLCanvasElement>(null);
   const glowCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animatedPadsRef = useRef<RenderPad[] | null>(null);
+  const animatedUnderLightsRef = useRef<RenderUnderLight[] | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const previousLightshowActiveRef = useRef(isLightshowActive);
   const [size, setSize] = useState<CanvasSize>({ width: 0, height: 0 });
@@ -337,15 +415,14 @@ const HousingCanvas = memo(({
       return;
     }
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      const nextWidth = entry.contentRect.width;
-      const nextHeight = entry.contentRect.height;
+    const observer = new ResizeObserver(([entry]) => {
+      const nextSize = {
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      };
 
       setSize((prev) => (
-        prev.width === nextWidth && prev.height === nextHeight
-          ? prev
-          : { width: nextWidth, height: nextHeight }
+        prev.width === nextSize.width && prev.height === nextSize.height ? prev : nextSize
       ));
     });
 
@@ -360,7 +437,7 @@ const HousingCanvas = memo(({
   );
 
   const targetPads = useMemo<RenderPad[]>(
-    () => Array.from({ length: PADS_PER_HOUSING }, (_, localIndex) => {
+    () => Array.from({ length: MYSTRIX_PADS_PER_HOUSING }, (_, localIndex) => {
       const absoluteIndex = startIndex + localIndex;
       const lightshowColor = lightshowColors?.get(absoluteIndex);
       const baseColor = baseColors[absoluteIndex] ?? OFF_COLOR;
@@ -376,46 +453,66 @@ const HousingCanvas = memo(({
     [baseColors, isLightshowActive, lightshowColors, selectedIndex, startIndex]
   );
 
+  const targetUnderLights = useMemo<RenderUnderLight[]>(
+    () => MYSTRIX_UNDER_LIGHT_SIDES.flatMap(({ side, notes }) => (
+      notes.map((note, position) => {
+        const lightshowColor = lightshowColors?.get(toUnderLightPreviewIndex(note));
+        const rawColor = normalizeColor(isLightshowActive ? lightshowColor ?? OFF_COLOR : OFF_COLOR);
+
+        return {
+          side,
+          position,
+          rawColor,
+        };
+      })
+    )),
+    [isLightshowActive, lightshowColors]
+  );
+
   useLayoutEffect(() => {
+    const underLightCanvas = underLightCanvasRef.current;
     const glowCanvas = glowCanvasRef.current;
     const canvas = canvasRef.current;
-    if (!glowCanvas || !canvas || !geometry) {
+    if (!underLightCanvas || !glowCanvas || !canvas || !geometry) {
       return;
     }
 
+    const underLightContext = underLightCanvas.getContext('2d');
     const glowContext = glowCanvas.getContext('2d');
     const context = canvas.getContext('2d');
-    if (!glowContext || !context) {
+    if (!underLightContext || !glowContext || !context) {
       return;
     }
 
     const dpr = window.devicePixelRatio || 1;
-    const pixelWidth = Math.max(1, Math.round(size.width * dpr));
-    const pixelHeight = Math.max(1, Math.round(size.height * dpr));
+    const underLightWidth = Math.max(1, underLightCanvas.clientWidth);
+    const underLightHeight = Math.max(1, underLightCanvas.clientHeight);
 
-    if (glowCanvas.width !== pixelWidth || glowCanvas.height !== pixelHeight) {
-      glowCanvas.width = pixelWidth;
-      glowCanvas.height = pixelHeight;
-    }
+    resizeCanvas(underLightCanvas, underLightWidth, underLightHeight, dpr);
+    resizeCanvas(glowCanvas, size.width, size.height, dpr);
+    resizeCanvas(canvas, size.width, size.height, dpr);
 
-    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-      canvas.width = pixelWidth;
-      canvas.height = pixelHeight;
-    }
+    const drawPreview = (pads: RenderPad[], underLights: RenderUnderLight[]) => {
+      clearCanvas(underLightContext, underLightCanvas, dpr);
+      for (const underLight of underLights) {
+        drawUnderLightSegment(
+          underLightContext,
+          underLight.side,
+          underLight.position,
+          underLight.rawColor,
+          geometry,
+          size,
+          underLightWidth,
+          underLightHeight
+        );
+      }
 
-    const drawPads = (pads: RenderPad[]) => {
-      glowContext.setTransform(1, 0, 0, 1, 0, 0);
-      glowContext.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
-      glowContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+      clearCanvas(glowContext, glowCanvas, dpr);
       for (const pad of pads) {
         drawPadGlow(glowContext, pad, geometry);
       }
 
-      context.setTransform(1, 0, 0, 1, 0, 0);
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+      clearCanvas(context, canvas, dpr);
       for (const pad of pads) {
         drawPadBody(context, pad, geometry);
       }
@@ -424,6 +521,9 @@ const HousingCanvas = memo(({
     const fromPads = animatedPadsRef.current?.length === targetPads.length
       ? animatedPadsRef.current
       : targetPads;
+    const fromUnderLights = animatedUnderLightsRef.current?.length === targetUnderLights.length
+      ? animatedUnderLightsRef.current
+      : targetUnderLights;
     const didLightshowStateChange = previousLightshowActiveRef.current !== isLightshowActive;
     const shouldAnimateColor = animateTransitions || didLightshowStateChange;
     const shouldAnimateSelection = fromPads.some((pad, index) => (
@@ -436,17 +536,23 @@ const HousingCanvas = memo(({
       window.cancelAnimationFrame(animationFrameRef.current);
     }
 
-    if (!shouldAnimate || !fromPads.some((pad, index) => (
-      hasPadColorMotion(pad, targetPads[index]) || hasPadSelectionMotion(pad, targetPads[index])
-    ))) {
+    const hasPadMotion = fromPads.some((pad, index) => (
+      hasColorMotion(pad, targetPads[index]) || hasPadSelectionMotion(pad, targetPads[index])
+    ));
+    const hasUnderLightMotion = fromUnderLights.some((underLight, index) => (
+      hasColorMotion(underLight, targetUnderLights[index])
+    ));
+
+    if (!shouldAnimate || (!hasPadMotion && !hasUnderLightMotion)) {
       animatedPadsRef.current = targetPads;
-      drawPads(targetPads);
+      animatedUnderLightsRef.current = targetUnderLights;
+      drawPreview(targetPads, targetUnderLights);
       return;
     }
 
     // Resizing a canvas clears its bitmap immediately, so keep the previous
     // frame visible before the animated transition starts.
-    drawPads(fromPads);
+    drawPreview(fromPads, fromUnderLights);
 
     const startedAt = performance.now();
     const renderFrame = (timestamp: number) => {
@@ -469,9 +575,17 @@ const HousingCanvas = memo(({
             )
           : targetPad.selectionProgress,
       }));
+      const nextUnderLights = targetUnderLights.map((targetUnderLight, index) => ({
+        side: targetUnderLight.side,
+        position: targetUnderLight.position,
+        rawColor: shouldAnimateColor
+          ? lerpColor(fromUnderLights[index].rawColor, targetUnderLight.rawColor, colorProgress)
+          : targetUnderLight.rawColor,
+      }));
 
       animatedPadsRef.current = nextPads;
-      drawPads(nextPads);
+      animatedUnderLightsRef.current = nextUnderLights;
+      drawPreview(nextPads, nextUnderLights);
 
       if (
         (shouldAnimateColor && colorProgress < 1) ||
@@ -492,7 +606,15 @@ const HousingCanvas = memo(({
         animationFrameRef.current = null;
       }
     };
-  }, [animateTransitions, geometry, isLightshowActive, targetPads]);
+  }, [
+    animateTransitions,
+    geometry,
+    isLightshowActive,
+    size.height,
+    size.width,
+    targetPads,
+    targetUnderLights,
+  ]);
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!geometry || !onColorSelect) {
@@ -520,7 +642,7 @@ const HousingCanvas = memo(({
       isLightshowActive ||
       selectedIndex === undefined ||
       selectedIndex < startIndex ||
-      selectedIndex >= startIndex + PADS_PER_HOUSING
+      selectedIndex >= startIndex + MYSTRIX_PADS_PER_HOUSING
     ) {
       return null;
     }
@@ -583,26 +705,33 @@ const HousingCanvas = memo(({
 
   return (
     <div className={styles.housingContainer}>
-      <div className={styles.housing}>
-        <div ref={viewportRef} className={styles.canvasViewport}>
-          <canvas
-            ref={glowCanvasRef}
-            className={styles.glowCanvas}
-            aria-hidden="true"
-          />
-          <canvas
-            ref={canvasRef}
-            className={styles.canvas}
-            onClick={handleCanvasClick}
-          />
-          {renderedPadLabel && (
-            <div
-              className={`${styles.padLabel} ${padLabelVisible ? styles.padLabelVisible : ''} font-size-sm`}
-              style={renderedPadLabel.style}
-            >
-              {renderedPadLabel.value}
-            </div>
-          )}
+      <div className={styles.housingShell}>
+        <canvas
+          ref={underLightCanvasRef}
+          className={styles.underLightCanvas}
+          aria-hidden="true"
+        />
+        <div className={styles.housing}>
+          <div ref={viewportRef} className={styles.canvasViewport}>
+            <canvas
+              ref={glowCanvasRef}
+              className={styles.glowCanvas}
+              aria-hidden="true"
+            />
+            <canvas
+              ref={canvasRef}
+              className={styles.canvas}
+              onClick={handleCanvasClick}
+            />
+            {renderedPadLabel && (
+              <div
+                className={`${styles.padLabel} ${padLabelVisible ? styles.padLabelVisible : ''} font-size-sm`}
+                style={renderedPadLabel.style}
+              >
+                {renderedPadLabel.value}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className={`${styles.housingLabel} text-code color-muted font-size-md`}>{title}</div>
@@ -628,8 +757,8 @@ export const PaletteGrid = memo(({
   const [renderedPicker, setRenderedPicker] = useState<RenderedPickerState | null>(null);
   const [animatePickerMove, setAnimatePickerMove] = useState(false);
   const [isPickerInteracting, setIsPickerInteracting] = useState(false);
-  const activeHousingStart = selectedIndex !== undefined && selectedIndex >= PADS_PER_HOUSING
-    ? PADS_PER_HOUSING
+  const activeHousingStart = selectedIndex !== undefined && selectedIndex >= MYSTRIX_PADS_PER_HOUSING
+    ? MYSTRIX_PADS_PER_HOUSING
     : 0;
 
   const {
@@ -685,8 +814,8 @@ export const PaletteGrid = memo(({
 
     setPickerAnchor((prev) => (
       prev &&
-      prev.left === anchor.left &&
-      prev.top === anchor.top
+        prev.left === anchor.left &&
+        prev.top === anchor.top
         ? prev
         : anchor
     ));

@@ -3,6 +3,7 @@ import { LightshowPlayer, HardwareLightshowEvent, UILightshowEvent } from '../ut
 import { Color, Palette } from '../types';
 import { Midi } from '@tonejs/midi';
 import { expand6bit } from '../utils/paletteFile';
+import { isUnderLightPreviewIndex } from '../utils/mystrixLayout';
 
 // Cache parsed MIDI objects so system animations can start without reparsing.
 const MIDI_OBJ_CACHE: Map<string, Midi> = new Map();
@@ -138,8 +139,7 @@ export const useLightshow = (
           if (playbackId !== currentPlaybackIdRef.current) return;
 
           const colorUpdates = uiEvents.reduce<Array<{
-            mapped: number;
-            mirrorIndex: number;
+            indexes: number[];
             color: Color | null;
           }>>((updates, event) => {
             const mapped = mapMIDINoteToPadIndex(event.index);
@@ -147,12 +147,12 @@ export const useLightshow = (
               return updates;
             }
 
-            const mirrorIndex = mapped + 64;
+            const indexes = isUnderLightPreviewIndex(mapped) ? [mapped] : [mapped, mapped + 64];
 
             if (event.velocity > 0) {
               const color = activePaletteColors[event.velocity] || { r: 255, g: 255, b: 255 };
               activePadCounts.set(mapped, (activePadCounts.get(mapped) || 0) + 1);
-              updates.push({ mapped, mirrorIndex, color });
+              updates.push({ indexes, color });
               return updates;
             }
 
@@ -160,7 +160,7 @@ export const useLightshow = (
             activePadCounts.set(mapped, newCount);
 
             if (newCount <= 0) {
-              updates.push({ mapped, mirrorIndex, color: null });
+              updates.push({ indexes, color: null });
             }
             return updates;
           }, []);
@@ -171,16 +171,11 @@ export const useLightshow = (
 
           setLightshowColors(prev => {
             const next = new Map(prev);
-            colorUpdates.forEach(({ mapped, mirrorIndex, color }) => {
-              if (color) {
-                next.set(mapped, color);
-                next.set(mirrorIndex, color);
-                return;
-              }
-
-              next.delete(mapped);
-              next.delete(mirrorIndex);
-            });
+            colorUpdates.forEach(({ indexes, color }) => (
+              indexes.forEach((index) => (
+                color ? next.set(index, color) : next.delete(index)
+              ))
+            ));
             return next;
           });
         },
