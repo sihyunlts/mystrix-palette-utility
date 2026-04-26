@@ -49,7 +49,7 @@ export const applyGlobalSettings = (
 ): Color[] => {
     if (saturation === 0 && contrast === 0 && hueShift === 0) return colors;
 
-    return colors.map((c, i) => {
+    return colors.map((c) => {
         if (!c) return { r: 0, g: 0, b: 0 };
         // Skip off LEDs - they should not be affected by contrast
         if (c.r === 0 && c.g === 0 && c.b === 0) return c;
