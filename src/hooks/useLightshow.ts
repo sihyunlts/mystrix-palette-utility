@@ -4,9 +4,13 @@ import { Color, Palette } from '../types';
 import { Midi } from '@tonejs/midi';
 import { FACTORY_PALETTE_COLORS } from '../utils/factoryPalette';
 import { isUnderLightPreviewIndex } from '../utils/mystrixLayout';
+import { MatrixOSMIDI, type DirectLedPreviewChange } from '../utils/midi';
 
 // Cache parsed MIDI objects so system animations can start without reparsing.
 const MIDI_OBJ_CACHE: Map<string, Midi> = new Map();
+const HARDWARE_PREVIEW_LATENCY_MS = 25;
+const LIGHTSHOW_START_DELAY_MS = 300;
+const LIGHTSHOW_END_FADE_MS = 250;
 
 // Eager load and parse system MIDI files
 const preloadSystemMIDI = async () => {
@@ -22,9 +26,10 @@ const preloadSystemMIDI = async () => {
 preloadSystemMIDI();
 
 export const useLightshow = (
-  midiOutput: MIDIOutput | null,
+  matrixOS: MatrixOSMIDI | null,
   effectivePalette: Palette,
-  mapMIDINoteToPadIndex: (note: number) => number | null
+  mapMIDINoteToPadIndex: (note: number) => number | null,
+  mapMIDINoteToSysexTarget: (note: number) => number | null
 ) => {
   const [isLightshowActive, setIsLightshowActive] = useState(false);
   const [lightshowColors, setLightshowColors] = useState<Map<number, Color>>(new Map());
@@ -37,12 +42,12 @@ export const useLightshow = (
     effectivePaletteRef.current = effectivePalette;
   }, [effectivePalette]);
 
-  const midiOutputRef = useRef(midiOutput);
+  const matrixOSRef = useRef(matrixOS);
   useEffect(() => {
-    midiOutputRef.current = midiOutput;
-  }, [midiOutput]);
+    matrixOSRef.current = matrixOS;
+  }, [matrixOS]);
 
-  const playLightshow = useCallback(async (source: string | File, device?: MIDIOutput) => {
+  const playLightshow = useCallback(async (source: string | File, previewMatrixOS?: MatrixOSMIDI) => {
     const playbackId = ++currentPlaybackIdRef.current;
     
     // Stop existing playback immediately
@@ -59,7 +64,8 @@ export const useLightshow = (
     const isSystemAnimation = typeof source === 'string' && source.startsWith('/');
     const activePaletteColors = isSystemAnimation ? FACTORY_PALETTE_COLORS : effectivePaletteRef.current.colors;
 
-    const targetOutput = device || midiOutputRef.current;
+    const targetMatrixOS = previewMatrixOS ?? matrixOSRef.current;
+    targetMatrixOS?.clearPreview(true);
     
     try {
       let midiObj: Midi;
@@ -83,15 +89,46 @@ export const useLightshow = (
       if (playbackId !== currentPlaybackIdRef.current) return;
 
       const activePadCounts = new Map<number, number>();
+      const hardwareActiveTargetCounts = new Map<number, number>();
 
       const player = new LightshowPlayer(
         (hwEvents: HardwareLightshowEvent[]) => {
           if (playbackId !== currentPlaybackIdRef.current) return;
-          if (!targetOutput) return;
+          if (!targetMatrixOS) return;
 
+          const changesByTimestamp = new Map<number, DirectLedPreviewChange[]>();
           hwEvents.forEach(event => {
-             // Add 25ms offset to account for typical React render + browser frame latency
-             targetOutput.send(new Uint8Array([0x90, event.index, event.velocity]), event.timestamp + 25);
+            const target = mapMIDINoteToSysexTarget(event.index);
+            if (target === null) {
+              return;
+            }
+
+            const currentCount = hardwareActiveTargetCounts.get(target) || 0;
+            let color: Color | null = null;
+
+            if (event.velocity > 0) {
+              hardwareActiveTargetCounts.set(target, currentCount + 1);
+              color = activePaletteColors[event.velocity] || { r: 255, g: 255, b: 255 };
+            } else {
+              const nextCount = Math.max(0, currentCount - 1);
+              hardwareActiveTargetCounts.set(target, nextCount);
+              if (nextCount <= 0) {
+                color = { r: 0, g: 0, b: 0 };
+              }
+            }
+
+            if (!color) {
+              return;
+            }
+
+            const timestamp = event.timestamp + HARDWARE_PREVIEW_LATENCY_MS;
+            const changes = changesByTimestamp.get(timestamp) || [];
+            changes.push({ target, color });
+            changesByTimestamp.set(timestamp, changes);
+          });
+
+          changesByTimestamp.forEach((changes, timestamp) => {
+            targetMatrixOS.sendDirectLedPreview(changes, timestamp);
           });
         },
         (uiEvents: UILightshowEvent[]) => {
@@ -141,7 +178,7 @@ export const useLightshow = (
         async () => {
           if (playbackId === currentPlaybackIdRef.current) {
             setLightshowColors(new Map());
-            await new Promise(r => setTimeout(r, 250));
+            await new Promise(r => setTimeout(r, LIGHTSHOW_END_FADE_MS));
             if (playbackId === currentPlaybackIdRef.current) {
               setIsLightshowActive(false);
             }
@@ -152,9 +189,9 @@ export const useLightshow = (
       lightshowPlayerRef.current = player;
       player.setMidi(midiObj);
       
-      // 3. Timing Orchestration: Wait for palette fade-out (0.08s) before starting MIDI
+      // Let the UI and hardware palette preview disappear before MIDI events start.
       if (playbackId === currentPlaybackIdRef.current) {
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, LIGHTSHOW_START_DELAY_MS));
       }
 
       // Final Race Check before starting the animation loop
@@ -167,14 +204,13 @@ export const useLightshow = (
         setIsLightshowActive(false);
       }
     }
-  }, [mapMIDINoteToPadIndex]); // midiOutput removed from dependencies
+  }, [mapMIDINoteToPadIndex, mapMIDINoteToSysexTarget]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-        lightshowPlayerRef.current?.stop();
-        setIsLightshowActive(false);
-    }
+      lightshowPlayerRef.current?.stop();
+    };
   }, []);
 
   return {

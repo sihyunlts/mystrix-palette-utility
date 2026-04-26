@@ -40,3 +40,45 @@ const NOTE_TO_PREVIEW_INDEX: Record<number, number> = (() => {
 export const toMystrixPreviewIndex = (note: number) => (
   NOTE_TO_PREVIEW_INDEX[note] ?? null
 );
+
+const UNDER_LIGHT_NOTE_TO_SYSEX_TARGET: Record<number, number> = (() => {
+  const map: Record<number, number> = {};
+  for (const { side, notes } of MYSTRIX_UNDER_LIGHT_SIDES) {
+    notes.forEach((note, position) => {
+      switch (side) {
+        case 'top':
+          map[note] = 91 + position;
+          break;
+        case 'right':
+          map[note] = 89 - position * 10;
+          break;
+        case 'bottom':
+          map[note] = 1 + position;
+          break;
+        case 'left':
+          map[note] = 80 - position * 10;
+          break;
+      }
+    });
+  }
+  return map;
+})();
+
+const toGridSysexTarget = (previewIndex: number) => {
+  const row = Math.floor(previewIndex / MYSTRIX_GRID_SIZE);
+  const column = previewIndex % MYSTRIX_GRID_SIZE;
+  return (8 - row) * 10 + column + 1;
+};
+
+export const toMystrixSysexTarget = (note: number) => {
+  const previewIndex = toMystrixPreviewIndex(note);
+  if (previewIndex === null) {
+    return null;
+  }
+
+  if (!isUnderLightPreviewIndex(previewIndex)) {
+    return toGridSysexTarget(previewIndex);
+  }
+
+  return UNDER_LIGHT_NOTE_TO_SYSEX_TARGET[note] ?? null;
+};

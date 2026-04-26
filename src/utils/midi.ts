@@ -1,8 +1,22 @@
 import { Color } from '../types';
+import { COLOR_TRANSITION_MS, lerpColor, normalizeColor } from './previewTransition';
+
+export interface DirectLedPreviewChange {
+  target: number;
+  color: Color;
+}
 
 // MatrixOS SysEx Protocol for Custom Palette
 export class MatrixOSMIDI {
+  private static readonly SYSEX_HEADER = [0xF0, 0x00, 0x02, 0x03, 0x4D, 0x58];
+  private static readonly OFF_COLOR: Color = { r: 0, g: 0, b: 0 };
+  private static readonly PREVIEW_WINDOW_SIZE = 64;
+  private static readonly MAX_DIRECT_PREVIEW_CHANGES_PER_MESSAGE = 16;
+  private static readonly PREVIEW_TRANSITION_SEND_INTERVAL_MS = 10;
   private output: MIDIOutput;
+  private lastPreviewStartIndex: number | null = null;
+  private lastPreviewColors: Color[] = [];
+  private previewAnimationFrame: number | null = null;
 
   constructor(output: MIDIOutput) {
     this.output = output;
@@ -10,7 +24,232 @@ export class MatrixOSMIDI {
 
   // 8bit to 6bit color conversion
   private compress8bit(value: number): number {
-    return value >> 2;
+    const normalized = Number.isFinite(value) ? Math.max(0, Math.min(255, Math.round(value))) : 0;
+    return normalized >> 2;
+  }
+
+  private previewTargetFromLocalIndex(localIndex: number): number {
+    const row = Math.floor(localIndex / 8);
+    const column = localIndex % 8;
+    return (8 - row) * 10 + column + 1;
+  }
+
+  private compressColor(color: Color): [number, number, number] {
+    return [
+      this.compress8bit(color.r),
+      this.compress8bit(color.g),
+      this.compress8bit(color.b),
+    ];
+  }
+
+  private compressedColorsEqual(first: Color, second: Color): boolean {
+    const firstCompressed = this.compressColor(first);
+    const secondCompressed = this.compressColor(second);
+    return (
+      firstCompressed[0] === secondCompressed[0] &&
+      firstCompressed[1] === secondCompressed[1] &&
+      firstCompressed[2] === secondCompressed[2]
+    );
+  }
+
+  private cancelPreviewTransition(): void {
+    if (this.previewAnimationFrame !== null) {
+      window.cancelAnimationFrame(this.previewAnimationFrame);
+      this.previewAnimationFrame = null;
+    }
+  }
+
+  private sendDirectLedPreviewFrame(changes: DirectLedPreviewChange[], timestamp?: number): void {
+    if (changes.length === 0) {
+      return;
+    }
+
+    for (let offset = 0; offset < changes.length; offset += MatrixOSMIDI.MAX_DIRECT_PREVIEW_CHANGES_PER_MESSAGE) {
+      const payload: number[] = [];
+      const chunk = changes.slice(offset, offset + MatrixOSMIDI.MAX_DIRECT_PREVIEW_CHANGES_PER_MESSAGE);
+
+      chunk.forEach(({ target, color }) => {
+        if (!Number.isFinite(target) || target < 0 || target > 127) {
+          return;
+        }
+
+        payload.push(
+          Math.round(target),
+          this.compress8bit(color.r),
+          this.compress8bit(color.g),
+          this.compress8bit(color.b)
+        );
+      });
+
+      if (payload.length === 0) {
+        continue;
+      }
+
+      this.output.send(new Uint8Array([
+        ...MatrixOSMIDI.SYSEX_HEADER,
+        0x5E,
+        ...payload,
+        0xF7,
+      ]), timestamp);
+    }
+  }
+
+  private sendGlobalPreviewClear(): void {
+    this.output.send(new Uint8Array([
+      ...MatrixOSMIDI.SYSEX_HEADER,
+      0x5E,
+      0x00, 0x00, 0x00, 0x00,
+      0xF7,
+    ]));
+  }
+
+  private transitionPreviewWindow(
+    startIndex: number,
+    fromColors: Color[],
+    targetColors: Color[],
+    changedLocalIndexes: number[],
+    onComplete?: () => void
+  ): void {
+    this.cancelPreviewTransition();
+
+    const startedAt = performance.now();
+    let lastSentAt = 0;
+    const changedLocalIndexSet = new Set(changedLocalIndexes);
+    const renderFrame = (timestamp: number) => {
+      const progress = Math.min((timestamp - startedAt) / COLOR_TRANSITION_MS, 1);
+      const frameColors = targetColors.map((targetColor, localIndex) => (
+        changedLocalIndexSet.has(localIndex)
+          ? lerpColor(fromColors[localIndex] || MatrixOSMIDI.OFF_COLOR, targetColor, progress)
+          : targetColor
+      ));
+
+      if (
+        progress >= 1 ||
+        timestamp - lastSentAt >= MatrixOSMIDI.PREVIEW_TRANSITION_SEND_INTERVAL_MS
+      ) {
+        this.sendDirectLedPreviewFrame(changedLocalIndexes.map(localIndex => ({
+          target: this.previewTargetFromLocalIndex(localIndex),
+          color: frameColors[localIndex],
+        })));
+        lastSentAt = timestamp;
+      }
+
+      this.lastPreviewStartIndex = startIndex;
+      this.lastPreviewColors = frameColors;
+
+      if (progress < 1) {
+        this.previewAnimationFrame = window.requestAnimationFrame(renderFrame);
+        return;
+      }
+
+      this.previewAnimationFrame = null;
+      this.lastPreviewColors = targetColors;
+      onComplete?.();
+    };
+
+    this.previewAnimationFrame = window.requestAnimationFrame(renderFrame);
+  }
+
+  sendDirectLedPreview(changes: DirectLedPreviewChange[], timestamp?: number): void {
+    this.cancelPreviewTransition();
+    this.sendDirectLedPreviewFrame(changes, timestamp);
+  }
+
+  clearPreview(animateTransitions = false): void {
+    const hasPreviewColors = this.lastPreviewColors.length === MatrixOSMIDI.PREVIEW_WINDOW_SIZE;
+    const startIndex = this.lastPreviewStartIndex ?? 0;
+
+    if (!animateTransitions || !hasPreviewColors) {
+      this.cancelPreviewTransition();
+      this.sendGlobalPreviewClear();
+      this.lastPreviewStartIndex = startIndex;
+      this.lastPreviewColors = Array.from(
+        { length: MatrixOSMIDI.PREVIEW_WINDOW_SIZE },
+        () => MatrixOSMIDI.OFF_COLOR
+      );
+      return;
+    }
+
+    const targetColors = Array.from(
+      { length: MatrixOSMIDI.PREVIEW_WINDOW_SIZE },
+      () => MatrixOSMIDI.OFF_COLOR
+    );
+    const changedLocalIndexes = this.lastPreviewColors.reduce<number[]>((indexes, color, localIndex) => {
+      if (!this.compressedColorsEqual(color, MatrixOSMIDI.OFF_COLOR)) {
+        indexes.push(localIndex);
+      }
+      return indexes;
+    }, []);
+
+    if (changedLocalIndexes.length === 0) {
+      this.sendGlobalPreviewClear();
+      return;
+    }
+
+    this.transitionPreviewWindow(
+      startIndex,
+      this.lastPreviewColors,
+      targetColors,
+      changedLocalIndexes,
+      () => this.sendGlobalPreviewClear()
+    );
+  }
+
+  previewPaletteWindow(startIndex: number, colors: Color[], forceFull = false, animateTransitions = false): void {
+    const normalizedStartIndex = startIndex >= MatrixOSMIDI.PREVIEW_WINDOW_SIZE
+      ? MatrixOSMIDI.PREVIEW_WINDOW_SIZE
+      : 0;
+    const previousStartIndex = this.lastPreviewStartIndex;
+    const previousColors = this.lastPreviewColors;
+    const hasPreviousColors = previousColors.length === MatrixOSMIDI.PREVIEW_WINDOW_SIZE;
+    const previousWindowIsOff = hasPreviousColors && previousColors.every(color => (
+      this.compressedColorsEqual(color, MatrixOSMIDI.OFF_COLOR)
+    ));
+    const canAnimateFromPreviousWindow = hasPreviousColors && (
+      previousStartIndex === normalizedStartIndex || previousWindowIsOff
+    );
+    const changedLocalIndexes: number[] = [];
+    const nextPreviewColors: Color[] = [];
+    const shouldForceFull = forceFull || this.lastPreviewStartIndex !== normalizedStartIndex;
+
+    for (let localIndex = 0; localIndex < MatrixOSMIDI.PREVIEW_WINDOW_SIZE; localIndex++) {
+      const color = normalizeColor(colors[normalizedStartIndex + localIndex] || MatrixOSMIDI.OFF_COLOR);
+      const previous = this.lastPreviewColors[localIndex];
+      nextPreviewColors[localIndex] = color;
+
+      if (
+        shouldForceFull ||
+        !previous ||
+        !this.compressedColorsEqual(previous, color)
+      ) {
+        changedLocalIndexes.push(localIndex);
+      }
+    }
+
+    if (changedLocalIndexes.length === 0) {
+      this.lastPreviewStartIndex = normalizedStartIndex;
+      this.lastPreviewColors = nextPreviewColors;
+      return;
+    }
+
+    if (animateTransitions && canAnimateFromPreviousWindow) {
+      this.transitionPreviewWindow(
+        normalizedStartIndex,
+        previousColors,
+        nextPreviewColors,
+        changedLocalIndexes
+      );
+      return;
+    }
+
+    this.cancelPreviewTransition();
+    this.sendDirectLedPreviewFrame(changedLocalIndexes.map(localIndex => ({
+      target: this.previewTargetFromLocalIndex(localIndex),
+      color: nextPreviewColors[localIndex],
+    })));
+
+    this.lastPreviewStartIndex = normalizedStartIndex;
+    this.lastPreviewColors = nextPreviewColors;
   }
 
   // Upload palette to MatrixOS

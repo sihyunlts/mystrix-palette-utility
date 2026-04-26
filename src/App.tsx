@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Color, Palette } from './types';
 import { MatrixOSMIDI } from './utils/midi';
@@ -17,10 +17,11 @@ import { useLightshow } from './hooks/useLightshow';
 import { BackupRestore } from './components/backup/BackupRestore';
 import { HIDConnection as HIDManager } from './utils/hid';
 import { HIDConnection } from './components/backup/HIDConnection';
-import { toMystrixPreviewIndex } from './utils/mystrixLayout';
+import { toMystrixPreviewIndex, toMystrixSysexTarget } from './utils/mystrixLayout';
 import styles from './App.module.css';
 
 const SLIDER_RESET_TRANSITION_MS = 120;
+const LIVE_PALETTE_PREVIEW_DEBOUNCE_MS = 80;
 
 // Dynamic Preset Loader
 // Vite equivalent of require.context
@@ -41,17 +42,16 @@ const INITIAL_PRESETS = Object.entries(presets).map(([path, module]: [string, an
 }).filter((p): p is any => p !== null);
 
 const AppContent: React.FC = () => {
-    const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { showModal } = useModal();
-  const [midiOutput, setMidiOutput] = useState<MIDIOutput | null>(null);
-  const midiOutputRef = useRef<MIDIOutput | null>(null);
-  useEffect(() => {
-    midiOutputRef.current = midiOutput;
-  }, [midiOutput]);
-
   const [matrixOS, setMatrixOS] = useState<MatrixOSMIDI | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<MIDIOutput | null>(null);
+  const [livePreviewStartIndex, setLivePreviewStartIndex] = useState(0);
+  const livePreviewTimeoutRef = useRef<number | null>(null);
+  const livePreviewWindowStartRef = useRef<number | null>(null);
+  const livePreviewMatrixOSRef = useRef<MatrixOSMIDI | null>(null);
+  const wasLightshowActiveRef = useRef(false);
   
   // Use URL hash for routing (default to 'palette' if empty or invalid)
   const [currentPage, setCurrentPage] = useState<'palette' | 'backup'>(() => {
@@ -137,23 +137,73 @@ const AppContent: React.FC = () => {
     }, SLIDER_RESET_TRANSITION_MS);
   }, []);
 
-  const mapMIDINoteToPadIndex = useCallback((note: number): number | null => {
-    return toMystrixPreviewIndex(note);
-  }, []);
-
-  /* 
-   * Lightshow Logic Refactored to Hook
-   * This hook manages:
-   * - Lightshow state (active/inactive)
-   * - Lightshow colors (for visualizer)
-   * - Playback control (play, stop)
-   * - Caching of MIDI files
-   */
   const { 
     isLightshowActive, 
     lightshowColors, 
     playLightshow 
-  } = useLightshow(midiOutput, effectivePalette, mapMIDINoteToPadIndex);
+  } = useLightshow(matrixOS, effectivePalette, toMystrixPreviewIndex, toMystrixSysexTarget);
+
+  useLayoutEffect(() => {
+    if (livePreviewTimeoutRef.current !== null) {
+      window.clearTimeout(livePreviewTimeoutRef.current);
+      livePreviewTimeoutRef.current = null;
+    }
+
+    if (isLightshowActive) {
+      wasLightshowActiveRef.current = true;
+      return;
+    }
+
+    if (!matrixOS || currentPage !== 'palette') {
+      return;
+    }
+
+    const forceFull =
+      livePreviewWindowStartRef.current !== livePreviewStartIndex ||
+      livePreviewMatrixOSRef.current !== matrixOS ||
+      wasLightshowActiveRef.current;
+    const animateTransitions = previewTransitionsEnabled || wasLightshowActiveRef.current;
+
+    const previewDelay = animateTransitions || forceFull ? 0 : LIVE_PALETTE_PREVIEW_DEBOUNCE_MS;
+
+    const sendLivePreview = () => {
+      try {
+        matrixOS.previewPaletteWindow(
+          livePreviewStartIndex,
+          effectivePalette.colors,
+          forceFull,
+          animateTransitions
+        );
+        livePreviewWindowStartRef.current = livePreviewStartIndex;
+        livePreviewMatrixOSRef.current = matrixOS;
+        wasLightshowActiveRef.current = false;
+      } catch (error) {
+        console.warn('Failed to send live palette preview:', error);
+      } finally {
+        livePreviewTimeoutRef.current = null;
+      }
+    };
+
+    if (previewDelay === 0) {
+      sendLivePreview();
+    } else {
+      livePreviewTimeoutRef.current = window.setTimeout(sendLivePreview, previewDelay);
+    }
+
+    return () => {
+      if (livePreviewTimeoutRef.current !== null) {
+        window.clearTimeout(livePreviewTimeoutRef.current);
+        livePreviewTimeoutRef.current = null;
+      }
+    };
+  }, [
+    currentPage,
+    effectivePalette.colors,
+    isLightshowActive,
+    livePreviewStartIndex,
+    matrixOS,
+    previewTransitionsEnabled,
+  ]);
 
 
   const connectionEpochRef = useRef<number>(0);
@@ -167,14 +217,13 @@ const AppContent: React.FC = () => {
     // Check if this connection attempt is still the most recent one
     if (epoch !== connectionEpochRef.current) return;
 
-    setMidiOutput(device);
-    setMatrixOS(new MatrixOSMIDI(device));
+    const connectedMatrixOS = new MatrixOSMIDI(device);
+    setMatrixOS(connectedMatrixOS);
     setSelectedDevice(device); // Sync the selection state
-    playLightshow('/connected.mid', device);
+    playLightshow('/connected.mid', connectedMatrixOS);
   }, [playLightshow]);
 
   const handleDeviceDisconnected = useCallback(() => {
-    setMidiOutput(null);
     setMatrixOS(null);
     setSelectedDevice(null);
   }, []);
@@ -182,10 +231,8 @@ const AppContent: React.FC = () => {
   const handleDeviceSelect = useCallback((device: MIDIOutput | null) => {
     setSelectedDevice(device);
     if (device) {
-      setMidiOutput(device);
       setMatrixOS(new MatrixOSMIDI(device));
     } else {
-      setMidiOutput(null);
       setMatrixOS(null);
     }
   }, []);
@@ -228,6 +275,7 @@ const AppContent: React.FC = () => {
 
   const handlePadSelect = useCallback((index: number) => {
     setPreviewTransitionsEnabled(false);
+    setLivePreviewStartIndex(index >= 64 ? 64 : 0);
     setSelectedColorIndex(prev => prev === index ? undefined : index);
   }, []);
 
@@ -246,7 +294,7 @@ const AppContent: React.FC = () => {
     try {
       // Hardware expects 0-based index (0=Slot1), but UI provides 1-based.
       await matrixOS.uploadPalette(slotId - 1, effectivePalette.colors);
-      playLightshow('/done.mid', midiOutput || undefined); 
+      playLightshow('/done.mid');
     } catch (error) {
       showModal({
         title: t('messages.uploadFailed'),
@@ -275,7 +323,7 @@ const AppContent: React.FC = () => {
     try {
       // Hardware expects 0-based index
       await matrixOS.deletePalette(slotId - 1);
-      playLightshow('/del_done.mid', midiOutput || undefined);
+      playLightshow('/del_done.mid');
     } catch (error) {
       showModal({
         title: t('messages.deleteFailed'),
@@ -510,7 +558,7 @@ const AppContent: React.FC = () => {
                       label={t('buttons.upload')} 
                       options={slotOptions} 
                       onSelect={handleUpload}
-                      disabled={isUploading || !midiOutput}
+                      disabled={isUploading || !matrixOS}
                       loading={isUploading}
                       loadingLabel={t('messages.uploading')}
                   />
@@ -519,7 +567,7 @@ const AppContent: React.FC = () => {
                       label={t('buttons.delete')} 
                       options={slotOptions} 
                       onSelect={handleDelete}
-                      disabled={isUploading || !midiOutput}
+                      disabled={isUploading || !matrixOS}
                       variant="danger"
                   />
                 </div>

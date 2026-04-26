@@ -21,6 +21,14 @@ import {
   toUnderLightPreviewIndex,
 } from '../../utils/mystrixLayout';
 import type { MystrixUnderLightSide } from '../../utils/mystrixLayout';
+import {
+  COLOR_TRANSITION_MS,
+  SELECTION_TRANSITION_MS,
+  easeOutCubic,
+  lerp,
+  lerpColor,
+  normalizeColor,
+} from '../../utils/previewTransition';
 
 interface PaletteGridProps {
   palette: Palette;
@@ -119,8 +127,6 @@ type PadVariant =
 
 const GAP_RATIO = 0.004;
 const SELECTED_SCALE = 1.1;
-const COLOR_TRANSITION_MS = 100;
-const SELECTION_TRANSITION_MS = 150;
 const PAD_LABEL_TRANSITION_MS = 120;
 const UNDER_LIGHT_LENGTH_RATIO = 1;
 const UNDER_LIGHT_THICKNESS_RATIO = 0.03;
@@ -181,25 +187,8 @@ const getPadVariant = (localIndex: number): PadVariant => {
   }
 };
 
-const normalizeChannel = (value: number | undefined) => (
-  typeof value === 'number' && Number.isFinite(value)
-    ? Math.max(0, Math.min(255, Math.round(value)))
-    : 0
-);
-const normalizeColor = (color: Partial<Color> | null | undefined): Color => ({
-  r: normalizeChannel(color?.r),
-  g: normalizeChannel(color?.g),
-  b: normalizeChannel(color?.b),
-});
 const isOffColor = (color: Color) => color.r === 0 && color.g === 0 && color.b === 0;
-const lerp = (from: number, to: number, progress: number) => from + (to - from) * progress;
-const easeOutCubic = (progress: number) => 1 - Math.pow(1 - progress, 3);
 const getSelectionScale = (selectionProgress: number) => 1 + (SELECTED_SCALE - 1) * selectionProgress;
-const lerpColor = (from: Color, to: Color, progress: number): Color => ({
-  r: normalizeChannel(lerp(from.r, to.r, progress)),
-  g: normalizeChannel(lerp(from.g, to.g, progress)),
-  b: normalizeChannel(lerp(from.b, to.b, progress)),
-});
 const hasColorMotion = (
   from: { rawColor: Color },
   to: { rawColor: Color }
