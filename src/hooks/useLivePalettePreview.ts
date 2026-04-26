@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Color } from '../types';
 import { MatrixOSMIDI } from '../utils/midi';
 
-const LIVE_PALETTE_PREVIEW_DEBOUNCE_MS = 80;
+const LIVE_PALETTE_PREVIEW_INTERVAL_MS = 20;
 const PALETTE_PREVIEW_WINDOW_SIZE = 64;
 
 interface UseLivePalettePreviewOptions {
@@ -22,6 +22,8 @@ export const useLivePalettePreview = ({
 }: UseLivePalettePreviewOptions) => {
   const [windowStartIndex, setWindowStartIndex] = useState(0);
   const timeoutRef = useRef<number | null>(null);
+  const lastPreviewSentAtRef = useRef(0);
+  const latestPreviewRequestRef = useRef<UseLivePalettePreviewOptions & { windowStartIndex: number } | null>(null);
   const lastWindowStartRef = useRef<number | null>(null);
   const lastMatrixOSRef = useRef<MatrixOSMIDI | null>(null);
   const wasLightshowActiveRef = useRef(false);
@@ -46,29 +48,52 @@ export const useLivePalettePreview = ({
   }, [currentPage, isLightshowActive, matrixOS]);
 
   useLayoutEffect(() => {
-    clearScheduledPreview();
-
     if (isLightshowActive) {
+      latestPreviewRequestRef.current = null;
+      clearScheduledPreview();
       wasLightshowActiveRef.current = true;
       return;
     }
 
     if (!matrixOS || currentPage !== 'palette') {
+      latestPreviewRequestRef.current = null;
+      clearScheduledPreview();
       return;
     }
 
-    const forceFull =
-      lastWindowStartRef.current !== windowStartIndex ||
-      lastMatrixOSRef.current !== matrixOS ||
-      wasLightshowActiveRef.current;
-    const shouldAnimate = animateTransitions || wasLightshowActiveRef.current;
-    const previewDelay = shouldAnimate || forceFull ? 0 : LIVE_PALETTE_PREVIEW_DEBOUNCE_MS;
+    latestPreviewRequestRef.current = {
+      matrixOS,
+      colors,
+      currentPage,
+      isLightshowActive,
+      animateTransitions,
+      windowStartIndex,
+    };
 
     const sendLivePreview = () => {
+      const request = latestPreviewRequestRef.current;
+
+      if (!request?.matrixOS || request.currentPage !== 'palette' || request.isLightshowActive) {
+        timeoutRef.current = null;
+        return;
+      }
+
+      const requestForceFull =
+        lastWindowStartRef.current !== request.windowStartIndex ||
+        lastMatrixOSRef.current !== request.matrixOS ||
+        wasLightshowActiveRef.current;
+      const requestShouldAnimate = request.animateTransitions || wasLightshowActiveRef.current;
+
       try {
-        matrixOS.previewPaletteWindow(windowStartIndex, colors, forceFull, shouldAnimate);
-        lastWindowStartRef.current = windowStartIndex;
-        lastMatrixOSRef.current = matrixOS;
+        request.matrixOS.previewPaletteWindow(
+          request.windowStartIndex,
+          request.colors,
+          requestForceFull,
+          requestShouldAnimate
+        );
+        lastPreviewSentAtRef.current = performance.now();
+        lastWindowStartRef.current = request.windowStartIndex;
+        lastMatrixOSRef.current = request.matrixOS;
         wasLightshowActiveRef.current = false;
       } catch (error) {
         console.warn('Failed to send live palette preview:', error);
@@ -77,13 +102,30 @@ export const useLivePalettePreview = ({
       }
     };
 
-    if (previewDelay === 0) {
+    const forceFull =
+      lastWindowStartRef.current !== windowStartIndex ||
+      lastMatrixOSRef.current !== matrixOS ||
+      wasLightshowActiveRef.current;
+    const shouldAnimate = animateTransitions || wasLightshowActiveRef.current;
+
+    if (shouldAnimate || forceFull) {
+      clearScheduledPreview();
       sendLivePreview();
-    } else {
-      timeoutRef.current = window.setTimeout(sendLivePreview, previewDelay);
+      return;
     }
 
-    return clearScheduledPreview;
+    const elapsed = performance.now() - lastPreviewSentAtRef.current;
+    const delay = Math.max(0, LIVE_PALETTE_PREVIEW_INTERVAL_MS - elapsed);
+
+    if (delay === 0) {
+      clearScheduledPreview();
+      sendLivePreview();
+      return;
+    }
+
+    if (timeoutRef.current === null) {
+      timeoutRef.current = window.setTimeout(sendLivePreview, delay);
+    }
   }, [
     animateTransitions,
     clearScheduledPreview,
@@ -93,6 +135,8 @@ export const useLivePalettePreview = ({
     matrixOS,
     windowStartIndex,
   ]);
+
+  useLayoutEffect(() => clearScheduledPreview, [clearScheduledPreview]);
 
   return {
     previewColor,
