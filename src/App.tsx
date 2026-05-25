@@ -162,9 +162,9 @@ const AppContent: React.FC = () => {
     if (epoch !== connectionEpochRef.current) return;
 
     const connectedMatrixOS = new MatrixOSMIDI(device);
-    setMatrixOS(connectedMatrixOS);
-    setSelectedDevice(device); // Sync the selection state
     playLightshow('/connected.mid', connectedMatrixOS);
+    setSelectedDevice(device); // Sync the selection state
+    setMatrixOS(connectedMatrixOS);
   }, [playLightshow]);
 
   const handleDeviceDisconnected = useCallback(() => {
@@ -181,18 +181,16 @@ const AppContent: React.FC = () => {
 
   const handleDeviceSelect = useCallback((device: MIDIOutput | null) => {
     setSelectedDevice(device);
-    setMatrixOS(prev => {
-      if (!device) {
+    if (!device) {
+      setMatrixOS(prev => {
         try {
           prev?.clearPreview(false);
         } catch (_) {
           // Ignore errors when clearing preview on disconnect
         }
         return null;
-      }
-
-      return new MatrixOSMIDI(device);
-    });
+      });
+    }
   }, []);
 
   const handleColorChange = useCallback((index: number, color: Color) => {
